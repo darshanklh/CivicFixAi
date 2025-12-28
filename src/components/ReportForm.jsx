@@ -1,3 +1,4 @@
+// src/components/ReportForm.jsx
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Disc } from 'lucide-react';
@@ -28,13 +29,14 @@ const ReportForm = ({ onRefresh, user }) => {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // AI Loading State
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAdvice, setAiAdvice] = useState(null);
 
   const CLOUD_NAME = "dtdkkjk1p"; 
   const UPLOAD_PRESET = "ml_default"; 
 
-  // Updated Categories for Dark Theme (Glow effects) + Translations
   const categories = [
     { id: 'Water Leakage', label: t('cat.Water Leakage') || "Water Leakage", icon: <Droplets className="w-10 h-10 text-white" />, bg: 'bg-gradient-to-br from-blue-600 to-blue-800', shadow: 'shadow-blue-500/30', border: 'border-blue-500/30' },
     { id: 'Potholes', label: t('cat.Potholes') || "Potholes", icon: <Construction className="w-10 h-10 text-white" />, bg: 'bg-gradient-to-br from-orange-600 to-orange-800', shadow: 'shadow-orange-500/30', border: 'border-orange-500/30' },
@@ -44,8 +46,27 @@ const ReportForm = ({ onRefresh, user }) => {
     { id: 'Other', label: t('cat.Other') || "Other", icon: <HelpCircle className="w-10 h-10 text-white" />, bg: 'bg-gradient-to-br from-slate-600 to-slate-800', shadow: 'shadow-slate-500/30', border: 'border-slate-500/30' },
   ];
 
-  const handleCategorySelect = (cat) => {
-    setFormData({ ...formData, category: cat });
+  // --- LOGIC: Handle switching vs resuming ---
+  const handleCategorySelect = (selectedCategory) => {
+    // 1. If the user selects a DIFFERENT category than what is currently in state:
+    //    We must WIPE the form clean so "Pothole" data doesn't appear in "Water Leakage".
+    if (selectedCategory !== formData.category) {
+        setFormData({ 
+            category: selectedCategory, 
+            title: '', 
+            description: '', 
+            state: '', 
+            city: '', 
+            pincode: '', 
+            addressDetail: '' 
+        });
+        setImage(null);
+        setPreview(null);
+        setAiAdvice(null);
+    }
+    // 2. If the user selects the SAME category (e.g. clicked Back, then clicked Potholes again):
+    //    We do NOTHING to formData. The previous state is preserved (Resume Mode).
+    
     setStep(2);
   };
 
@@ -76,13 +97,30 @@ const ReportForm = ({ onRefresh, user }) => {
     return result.secure_url;
   };
 
+  // --- AI Handler with 2.5s Delay + Title Scan ---
   const handleAskAI = async (e) => {
     e.preventDefault();
-    if (!image || !formData.description) return alert("Please add an image and description first!");
+    
+    if (!image || (!formData.description && !formData.title)) {
+        return alert("Please add an image and at least a Title or Description!");
+    }
+
     setAiLoading(true);
-    const advice = await getAiAdvice(image, formData.description);
-    setAiAdvice(advice);
-    setAiLoading(false);
+    
+    try {
+        const minLoadingTime = new Promise(resolve => setTimeout(resolve, 2500));
+        const [advice] = await Promise.all([
+            getAiAdvice(image, formData.title, formData.description),
+            minLoadingTime
+        ]);
+        
+        setAiAdvice(advice);
+    } catch (error) {
+        console.error("AI Generation Error:", error);
+        alert("Could not reach Gemini AI. Please check your connection.");
+    } finally {
+        setAiLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -116,7 +154,9 @@ const ReportForm = ({ onRefresh, user }) => {
             severity: aiAdvice?.severity || "Medium",
             summary: formData.description.substring(0, 100),
             estimatedTime: aiAdvice?.estimatedTime || null,
-            impactScope: aiAdvice?.impactScope || 0
+            impactScope: aiAdvice?.impactScope || 0,
+            precautions: aiAdvice?.precautions || [], 
+            diyFixes: aiAdvice?.diyFixes || []        
         },
         createdAt: serverTimestamp(),
         votes: 0
@@ -124,6 +164,7 @@ const ReportForm = ({ onRefresh, user }) => {
 
       alert("Report Submitted Successfully!");
       setStep(1);
+      // Reset form completely after successful submit
       setFormData({ category: '', title: '', description: '', state: '', city: '', pincode: '', addressDetail: '' });
       setImage(null);
       setPreview(null);
@@ -160,9 +201,7 @@ const ReportForm = ({ onRefresh, user }) => {
                 onClick={() => handleCategorySelect(cat.id)}
                 className={`relative group overflow-hidden rounded-3xl p-6 h-48 text-left transition-all duration-300 hover:scale-[1.02] ${cat.bg} border border-white/10 hover:border-white/30 shadow-lg hover:shadow-2xl ${cat.shadow}`}
               >
-                {/* Abstract Background Icon */}
                 <div className="absolute top-[-20px] right-[-20px] opacity-20 group-hover:opacity-30 transition-opacity transform scale-150 rotate-12">{cat.icon}</div>
-                
                 <div className="relative z-10 flex flex-col h-full justify-between">
                     <div className="bg-white/10 w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20 shadow-inner">
                         {cat.icon}
@@ -181,7 +220,6 @@ const ReportForm = ({ onRefresh, user }) => {
       {step === 2 && (
         <div className="max-w-2xl mx-auto bg-slate-900/60 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden animate-in slide-in-from-bottom-10 duration-500">
           
-          {/* Form Header */}
           <div className="p-6 border-b border-slate-700/50 flex items-center gap-4 bg-slate-900/40">
             <button onClick={() => setStep(1)} className="p-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl transition-colors text-slate-300">
                 <ArrowLeft className="w-5 h-5" />
@@ -203,7 +241,6 @@ const ReportForm = ({ onRefresh, user }) => {
               />
             </div>
 
-            {/* --- LOCATION --- */}
             <div className="space-y-4">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1"><MapPin className="w-3 h-3 text-blue-400"/> {t('citizen.locDetails') || "Location Details"}</label>
                 
@@ -259,9 +296,12 @@ const ReportForm = ({ onRefresh, user }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-4">
-              <button onClick={handleAskAI} disabled={aiLoading || loading} className="group bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 border border-indigo-500/30 transition-all">
-                {/* Replaced "Ask AI Help" with "Ask Gemini" */}
-                {aiLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <Sparkles className="w-5 h-5 group-hover:text-indigo-200 transition-colors" />} {t('citizen.askAi') || "Ask Gemini"}
+              <button onClick={handleAskAI} disabled={aiLoading || loading} className="group bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 border border-indigo-500/30 transition-all active:scale-95">
+                {aiLoading ? (
+                    <><Loader2 className="animate-spin w-5 h-5" /> Analyzing...</>
+                ) : (
+                    <><Sparkles className="w-5 h-5 group-hover:text-indigo-200 transition-colors" /> {t('citizen.askAi') || "Ask Gemini"}</>
+                )}
               </button>
               <button onClick={handleSubmit} disabled={loading} className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/40 hover:shadow-blue-900/60 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
                 {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <Send className="w-5 h-5" />} {t('citizen.submit') || "Submit Report"}
@@ -269,9 +309,8 @@ const ReportForm = ({ onRefresh, user }) => {
             </div>
           </form>
 
-          {/* AI Advice Section - Dark Mode */}
           {aiAdvice && (
-            <div className="p-6 bg-slate-950/80 text-white border-t border-slate-800 backdrop-blur-md">
+            <div className="p-6 bg-slate-950/80 text-white border-t border-slate-800 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2">
                <div className="flex items-center gap-2 mb-4">
                    <ShieldAlert className="text-yellow-400 w-5 h-5" />
                    <h3 className="font-bold text-lg">AI Analysis</h3>
