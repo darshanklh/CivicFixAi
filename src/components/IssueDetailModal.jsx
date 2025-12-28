@@ -6,9 +6,8 @@ import { X, MapPin, Clock, ShieldAlert, CheckCircle2, AlertTriangle } from 'luci
 const IssueDetailModal = ({ issue, onClose }) => {
   if (!issue) return null;
 
-  const { category, severity, summary, precautions, diyFixes } = issue.aiAnalysis || {};
+  const { category, severity, summary } = issue.aiAnalysis || {};
 
-  // UPDATED: Dark Theme Badge Colors
   const getSeverityColor = (sev) => {
     switch (sev) {
       case 'Critical': return 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.2)]';
@@ -30,7 +29,6 @@ const IssueDetailModal = ({ issue, onClose }) => {
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        {/* Dark Backdrop */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -39,33 +37,40 @@ const IssueDetailModal = ({ issue, onClose }) => {
           className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         />
 
-        {/* Modal Window - UPDATED: Dark Background & Borders */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="bg-slate-900 w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-700 overflow-hidden relative flex flex-col md:flex-row z-10"
+          onClick={(e) => e.stopPropagation()}
+          // --- FIX APPLIED HERE ---
+          // 1. md:h-[85vh]: Force fixed height on desktop so children know when to scroll.
+          // 2. md:overflow-hidden: Clips the outer rounded corners.
+          className="bg-slate-900 w-full max-w-4xl max-h-[85vh] md:h-[85vh] rounded-3xl shadow-2xl border border-slate-700 relative flex flex-col md:flex-row z-10 overflow-y-auto md:overflow-hidden"
         >
           {/* Close Button */}
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-slate-700 text-white rounded-full transition-colors z-20 backdrop-blur-md border border-white/10"
+            className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-slate-700 text-white rounded-full transition-colors z-30 backdrop-blur-md border border-white/10"
           >
             <X className="w-5 h-5" />
           </button>
 
-          {/* LEFT SIDE: Full Image */}
-          <div className="w-full md:w-1/2 h-64 md:h-auto bg-slate-950 relative border-b md:border-b-0 md:border-r border-slate-800">
+          {/* LEFT SIDE: Image */}
+          {/* Mobile: h-56 fixed. Desktop: h-full (fills the 85vh parent) */}
+          <div className="w-full md:w-1/2 h-56 md:h-full bg-slate-950 relative border-b md:border-b-0 md:border-r border-slate-800 shrink-0">
             <img 
               src={issue.imageUrl} 
               alt={category} 
-              className="w-full h-full object-contain md:object-cover opacity-90"
+              className="absolute inset-0 w-full h-full object-cover opacity-90"
             />
+            {/* Gradient for mobile text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent md:hidden opacity-60"></div>
           </div>
 
-          {/* RIGHT SIDE: Details Scrollable Area - UPDATED: Colors */}
-          <div className="w-full md:w-1/2 flex flex-col h-full overflow-y-auto bg-slate-900 custom-scrollbar">
-            <div className="p-8 space-y-6">
+          {/* RIGHT SIDE: Details */}
+          {/* Mobile: h-auto. Desktop: h-full + overflow-y-auto (Scrolls inside the fixed 85vh parent) */}
+          <div className="w-full md:w-1/2 flex flex-col h-auto md:h-full md:overflow-y-auto bg-slate-900 custom-scrollbar relative">
+            <div className="p-6 md:p-8 space-y-6">
               
               {/* Header */}
               <div>
@@ -78,7 +83,7 @@ const IssueDetailModal = ({ issue, onClose }) => {
                   </span>
                 </div>
                 
-                <h2 className="text-3xl font-bold text-white mb-2 leading-tight">
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">
                   {issue.title || category || "Reported Issue"}
                 </h2>
                 
@@ -93,12 +98,12 @@ const IssueDetailModal = ({ issue, onClose }) => {
               {/* Description */}
               <div>
                 <h3 className="text-sm font-bold text-slate-300 uppercase mb-2 tracking-wider">Description</h3>
-                <p className="text-slate-400 leading-relaxed text-lg font-light">
+                <p className="text-slate-400 leading-relaxed text-base md:text-lg font-light break-words">
                   {issue.description || summary}
                 </p>
               </div>
 
-              {/* Location - UPDATED: Dark card */}
+              {/* Location */}
               {issue.locationText && (
                 <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800">
                   <h3 className="flex items-center gap-2 text-sm font-bold text-slate-200 mb-1">
@@ -108,7 +113,7 @@ const IssueDetailModal = ({ issue, onClose }) => {
                 </div>
               )}
 
-              {/* AI Analysis (Precautions & Fixes) - UPDATED: Darker Indigo Theme */}
+              {/* AI Analysis */}
               {issue.aiAnalysis && (
                 <div className="bg-indigo-950/30 rounded-2xl p-5 border border-indigo-500/20 space-y-4">
                   <div className="flex items-center gap-2 text-indigo-200">
