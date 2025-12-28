@@ -143,7 +143,7 @@ function App() {
   );
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden relative font-sans text-slate-100">
+    <div className="h-screen h-[100dvh] flex flex-col overflow-hidden relative font-sans text-slate-100">
       
       {/* Background for Citizen Only */}
       {role === 'citizen' && <MidnightBackground />}
