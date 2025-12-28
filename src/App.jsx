@@ -250,20 +250,30 @@ function App() {
                                     <div className="p-4 space-y-2 mt-4 flex-shrink-0">
                                         <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Navigation</p>
                                         
-                                        <div className="flex items-center gap-3 p-3 mx-2 rounded-xl font-bold cursor-pointer bg-blue-600/10 text-blue-400 border border-blue-500/20 shadow-sm" onClick={() => handleNavigation('dashboard')}>
-                                            <Home className="w-5 h-5" /> <span>{t('citizen.submit') || "Home"}</span>
+                                        <div 
+                                            onClick={() => handleNavigation('dashboard')}
+                                            className={`flex items-center gap-3 p-3 mx-2 rounded-xl cursor-pointer transition-all ${view === 'dashboard' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20 shadow-sm font-bold' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white border border-transparent font-medium'}`}
+                                        >
+                                            <Home className="w-5 h-5" /> 
+                                            <span>{t('citizen.submit') || "Home"}</span>
                                         </div>
                                         
-                                        <button onClick={() => handleOpenModal(setShowTrackerModal)} className="w-full flex items-center justify-between p-3 px-5 hover:bg-slate-800/50 text-slate-300 font-medium transition-colors rounded-xl">
+                                        <button onClick={() => handleOpenModal(setShowTrackerModal)} className="w-full flex items-center justify-between p-3 px-5 hover:bg-slate-800/50 text-slate-300 font-medium transition-colors rounded-xl border border-transparent">
                                             <div className="flex items-center gap-3"><BarChart3 className="w-5 h-5 text-purple-400" /> <span>{t('citizen.liveTracker') || "Live Tracker"}</span></div>
                                         </button>
                                         
-                                        <button onClick={() => handleOpenModal(setShowForecast)} className="w-full flex items-center justify-between p-3 px-5 hover:bg-slate-800/50 text-slate-300 font-medium transition-colors rounded-xl">
+                                        <button onClick={() => handleOpenModal(setShowForecast)} className="w-full flex items-center justify-between p-3 px-5 hover:bg-slate-800/50 text-slate-300 font-medium transition-colors rounded-xl border border-transparent">
                                             <div className="flex items-center gap-3"><BrainCircuit className="w-5 h-5 text-indigo-400" /> <span>{t('citizen.aiForecast') || "Gemini Forecast"}</span></div>
                                         </button>
                                         
-                                        <button onClick={() => handleNavigation('my-reports')} className="w-full flex items-center justify-between p-3 px-5 hover:bg-slate-800/50 text-slate-300 font-medium transition-colors rounded-xl">
-                                            <div className="flex items-center gap-3"><FileText className="w-5 h-5 text-orange-400" /> <span>{t('citizen.myReports') || "My Reports"}</span></div>
+                                        <button 
+                                            onClick={() => handleNavigation('my-reports')} 
+                                            className={`w-full flex items-center justify-between p-3 px-5 transition-all rounded-xl ${view === 'my-reports' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20 shadow-sm font-bold' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white border border-transparent font-medium'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <FileText className={`w-5 h-5 ${view === 'my-reports' ? 'text-blue-400' : 'text-orange-400'}`} /> 
+                                                <span>{t('citizen.myReports') || "My Reports"}</span>
+                                            </div>
                                         </button>
                                     </div>
 
