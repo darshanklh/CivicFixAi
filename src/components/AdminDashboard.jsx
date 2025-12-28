@@ -74,10 +74,11 @@ const AnalyticsView = ({ issues }) => {
         let maxCount = 0;
         issues.forEach(i => {
             const cat = i.aiAnalysis?.category || 'Other';
-            counts[cat] = (counts[cat] || 0) + 1;
-            if (counts[cat] > maxCount) maxCount = counts[cat];
+            const safeCat = cat.split(' ')[0]; // Group slightly better
+            counts[safeCat] = (counts[safeCat] || 0) + 1;
+            if (counts[safeCat] > maxCount) maxCount = counts[safeCat];
         });
-        const standardCats = ['Water Leakage', 'Potholes', 'Garbage', 'Street Light', 'Other'];
+        const standardCats = ['Water', 'Potholes', 'Garbage', 'Street', 'Manhole'];
         return standardCats.map(cat => ({
             label: cat,
             count: counts[cat] || 0,
@@ -143,7 +144,7 @@ const AnalyticsView = ({ issues }) => {
     );
 };
 
-// --- 3. CONTRACTOR PROFILE MODAL ---
+// --- 3. CONTRACTOR PROFILE MODAL (FIXED) ---
 const ContractorProfileModal = ({ name, issues, onClose }) => {
     const history = issues.filter(i => i.contractorName === name && i.status === 'Resolved');
     
@@ -173,7 +174,8 @@ const ContractorProfileModal = ({ name, issues, onClose }) => {
                             <p className="text-blue-400 text-sm font-bold uppercase tracking-wider mb-2">Verified Contractor</p>
                             <div className="flex gap-2">
                                 <span className="bg-slate-800 text-slate-300 text-xs px-2 py-1 rounded border border-slate-700 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3"/> {history[0]?.contractorCity || "Unknown Location"}
+                                    {/* FIX: Use 'city' instead of 'contractorCity' */}
+                                    <MapPin className="w-3 h-3"/> {history[0]?.city || "Unknown Location"}
                                 </span>
                             </div>
                         </div>
@@ -544,7 +546,6 @@ const SystemSettingsView = ({ issues }) => {
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     );
@@ -800,7 +801,7 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
                                                         <div className="flex flex-wrap gap-2">
                                                             {departments.map((dept) => (
                                                                 <button key={dept.id} onClick={() => handleForward(issue.id, dept.id)} className={`${dept.color} hover:opacity-90 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-transform active:scale-95`}>
-                                                                    {dept.icon} {dept.id}
+                                                                        {dept.icon} {dept.id}
                                                                 </button>
                                                             ))}
                                                             <button onClick={() => {setAssigningId(null); setPrice('');}} className="text-slate-400 hover:text-white px-3 text-xs border border-slate-600 rounded-lg">Cancel</button>
