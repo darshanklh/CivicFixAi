@@ -168,9 +168,9 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
       <ProfessionalBackground />
 
       {/* HEADER */}
-      <div className="relative z-50 bg-slate-950/70 backdrop-blur-xl border-b border-slate-800 p-6 flex flex-col md:flex-row justify-between items-start md:items-center sticky top-0 shadow-2xl">
+      <div className="relative z-50 bg-slate-950/70 backdrop-blur-xl border-b border-slate-800 p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center sticky top-0 shadow-2xl gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
             <div className="relative">
                 <div className="absolute inset-0 bg-amber-500 blur-lg opacity-20"></div>
                 <div className="relative p-2 bg-amber-500 rounded-lg text-slate-950 shadow-lg border border-amber-400">
@@ -179,34 +179,36 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
             </div>
             <span className="tracking-tight">{t('contractor.title') || "Contractor Portal"}</span>
           </h1>
-          <div className="flex flex-col md:flex-row md:items-center gap-3 text-slate-400 text-sm mt-3 ml-1">
-             <div className="flex items-center gap-2">
-                <span className="bg-slate-900 text-slate-300 px-3 py-1 rounded text-xs font-bold uppercase border border-slate-700 flex items-center gap-2 tracking-wider">
+          
+          {/* UPDATED: Added flex-wrap to prevent cutoff */}
+          <div className="flex flex-wrap items-center gap-2 md:gap-3 text-slate-400 text-sm mt-3 ml-1">
+             <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-slate-900 text-slate-300 px-3 py-1 rounded text-xs font-bold uppercase border border-slate-700 flex items-center gap-2 tracking-wider whitespace-nowrap">
                     {getRoleIcon(user?.roleType)}
                     {user?.roleType || "General Unit"}
                 </span>
                 
-                {/* Display Specific Contractor Name - UPDATED to use user.displayName */}
-                <span className="bg-slate-900 text-blue-400 px-3 py-1 rounded text-xs font-bold uppercase border border-slate-700 flex items-center gap-1 tracking-wider shadow-[0_0_10px_rgba(59,130,246,0.1)]">
+                <span className="bg-slate-900 text-blue-400 px-3 py-1 rounded text-xs font-bold uppercase border border-slate-700 flex items-center gap-1 tracking-wider shadow-[0_0_10px_rgba(59,130,246,0.1)] whitespace-nowrap">
                     <User className="w-3 h-3"/> {user?.displayName || "Unknown User"}
                 </span>
 
                 {user?.operatingCity && (
-                    <span className="bg-slate-900 text-amber-500 px-3 py-1 rounded text-xs font-bold uppercase border border-slate-700 flex items-center gap-1 tracking-wider shadow-[0_0_10px_rgba(245,158,11,0.1)]">
+                    <span className="bg-slate-900 text-amber-500 px-3 py-1 rounded text-xs font-bold uppercase border border-slate-700 flex items-center gap-1 tracking-wider shadow-[0_0_10px_rgba(245,158,11,0.1)] whitespace-nowrap">
                         <MapPin className="w-3 h-3"/> {user.operatingCity}
                     </span>
                 )}
              </div>
-             <span className="hidden sm:flex text-emerald-400 font-mono text-[10px] items-center gap-1.5 ml-2 border border-emerald-500/20 px-2 py-0.5 rounded bg-emerald-500/5">
+             <span className="hidden sm:flex text-emerald-400 font-mono text-[10px] items-center gap-1.5 ml-2 border border-emerald-500/20 px-2 py-0.5 rounded bg-emerald-500/5 whitespace-nowrap">
                 <Activity className="w-3 h-3" /> {t('contractor.online') || "SYSTEM ACTIVE"}
              </span>
           </div>
         </div>
 
         {/* Right Side: Language & Tabs */}
-        <div className="flex flex-col md:flex-row gap-4 mt-6 md:mt-0 items-end md:items-center">
+        {/* UPDATED: w-full md:w-auto to handle mobile width properly */}
+        <div className="flex flex-col md:flex-row gap-4 mt-2 md:mt-0 items-start md:items-center w-full md:w-auto">
             
-            <div className="relative z-50">
+            <div className="relative z-50 self-end md:self-auto">
                 <button onClick={() => setLangMenuOpen(!langMenuOpen)} className="flex items-center gap-2 bg-slate-900 text-slate-300 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold uppercase hover:bg-slate-800 transition-colors shadow-lg active:scale-95">
                     <Languages className="w-4 h-4 text-blue-400" />
                     {i18n.language ? i18n.language.toUpperCase() : 'EN'}
@@ -222,7 +224,8 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
             </div>
 
             {/* Tabs */}
-            <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 shadow-inner">
+            {/* UPDATED: Added overflow-x-auto so tabs scroll horizontally on small screens */}
+            <div className="flex w-full md:w-auto bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 shadow-inner overflow-x-auto no-scrollbar">
                 <TabButton active={activeTab === 'available'} onClick={() => setActiveTab('available')} icon={<PackageCheck className="w-4 h-4" />} label={t('contractor.newOrders') || "New Orders"} count={availableJobs.length} color="amber" />
                 <TabButton active={activeTab === 'active'} onClick={() => setActiveTab('active')} icon={<Timer className="w-4 h-4" />} label={t('contractor.inProgress') || "In Progress"} count={myActiveJobs.length} color="blue" />
                 <TabButton active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-4 h-4" />} label={t('contractor.history') || "History"} color="slate" />
@@ -231,8 +234,8 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
       </div>
 
       {/* CONTENT AREA */}
-      <div className="relative z-10 flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
-        <div className="max-w-5xl mx-auto min-h-[500px]">
+      <div className="relative z-10 flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+        <div className="max-w-5xl mx-auto min-h-[500px] pb-20">
           <AnimatePresence mode='wait'>
             
             {/* 1. AVAILABLE TAB */}
@@ -301,7 +304,7 @@ const TabButton = ({ active, onClick, icon, label, count, color }) => {
     const inactiveClass = "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 border-transparent";
     const badgeColor = color === 'amber' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'bg-blue-500/20 text-blue-500 border border-blue-500/30';
     return (
-        <button onClick={onClick} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap border ${active ? activeClass : inactiveClass}`}>
+        <button onClick={onClick} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap border flex-shrink-0 ${active ? activeClass : inactiveClass}`}>
             {icon} {label}
             {count > 0 && ( <span className={`${badgeColor} px-1.5 py-0.5 rounded text-[10px] ml-1`}>{count}</span> )}
         </button>
