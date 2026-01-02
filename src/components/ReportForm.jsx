@@ -45,7 +45,7 @@ const ReportForm = ({ onRefresh, user }) => {
   const CLOUD_NAME = "dtdkkjk1p"; 
   const UPLOAD_PRESET = "ml_default"; 
 
-  // --- FIX: RESTORE DRAFT ON LOAD ---
+  // --- RESTORE DRAFT ON LOAD ---
   useEffect(() => {
     const savedDraft = localStorage.getItem('civic_form_draft');
     if (savedDraft) {
@@ -61,9 +61,8 @@ const ReportForm = ({ onRefresh, user }) => {
     }
   }, []);
 
-  // --- FIX: SAVE DRAFT ON CHANGE ---
+  // --- SAVE DRAFT ON CHANGE ---
   useEffect(() => {
-    // Only save if there's actual data to avoid saving empty states over valid data
     if (formData.category || formData.title || formData.description) {
         localStorage.setItem('civic_form_draft', JSON.stringify(formData));
     }
@@ -205,7 +204,7 @@ const ReportForm = ({ onRefresh, user }) => {
         votes: 0
       });
 
-      // --- FIX: CLEAR DRAFT AND RESET ---
+      // --- CLEAR DRAFT AND RESET ---
       setStep(1);
       setFormData({ category: '', title: '', description: '', state: '', city: '', pincode: '', addressDetail: '' });
       setImage(null);
@@ -350,7 +349,7 @@ const ReportForm = ({ onRefresh, user }) => {
                                 <div className="flex flex-col items-center md:hidden w-full">
                                      <p className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">{t('citizen.uploadPhoto') || "Upload Evidence"}</p>
                                      <div className="flex gap-4 w-full justify-center">
-                                        {/* Camera Button - Updated for Stability (Removed capture="environment") */}
+                                        {/* Camera Button */}
                                         <button 
                                             type="button"
                                             onClick={() => cameraInputRef.current.click()}
@@ -384,12 +383,12 @@ const ReportForm = ({ onRefresh, user }) => {
                             </div>
                         )}
                         
-                        {/* Hidden Input 1: Camera (Updated for Stability - Removed capture) */}
+                        {/* Hidden Input 1: Camera (RESTORED) */}
                         <input 
                             ref={cameraInputRef}
                             type="file" 
                             accept="image/*" 
-                            // capture="environment"  <-- REMOVED TO FIX MEMORY CRASH
+                            capture="environment" // <--- ADDED BACK: Forces camera on mobile
                             className="hidden" 
                             onChange={handleImageChange} 
                         />
