@@ -9,8 +9,8 @@ import {
   Loader2, Send, UploadCloud, Sparkles, ShieldAlert,
   Droplets, Construction, Trash2, Lightbulb, HelpCircle, MapPin, ArrowLeft
 } from 'lucide-react';
-
 import { INDIAN_LOCATIONS } from '../data/locations';
+import ConfirmationModal from './ConfirmationModal'; // <--- NEW IMPORT
 
 const ReportForm = ({ onRefresh, user }) => {
   const { t } = useTranslation();
@@ -34,6 +34,9 @@ const ReportForm = ({ onRefresh, user }) => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAdvice, setAiAdvice] = useState(null);
 
+  // Modal State
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
   const CLOUD_NAME = "dtdkkjk1p"; 
   const UPLOAD_PRESET = "ml_default"; 
 
@@ -46,10 +49,7 @@ const ReportForm = ({ onRefresh, user }) => {
     { id: 'Other', label: t('cat.Other') || "Other", icon: <HelpCircle className="w-10 h-10 text-white" />, bg: 'bg-gradient-to-br from-slate-600 to-slate-800', shadow: 'shadow-slate-500/30', border: 'border-slate-500/30' },
   ];
 
-  // --- LOGIC: Handle switching vs resuming ---
   const handleCategorySelect = (selectedCategory) => {
-    // 1. If the user selects a DIFFERENT category than what is currently in state:
-    //    We must WIPE the form clean so "Pothole" data doesn't appear in "Water Leakage".
     if (selectedCategory !== formData.category) {
         setFormData({ 
             category: selectedCategory, 
@@ -64,9 +64,6 @@ const ReportForm = ({ onRefresh, user }) => {
         setPreview(null);
         setAiAdvice(null);
     }
-    // 2. If the user selects the SAME category (e.g. clicked Back, then clicked Potholes again):
-    //    We do NOTHING to formData. The previous state is preserved (Resume Mode).
-    
     setStep(2);
   };
 
@@ -97,10 +94,9 @@ const ReportForm = ({ onRefresh, user }) => {
     return result.secure_url;
   };
 
-  // --- AI Handler with 2.5s Delay + Title Scan ---
+  // --- AI Handler ---
   const handleAskAI = async (e) => {
     e.preventDefault();
-    
     if (!image || (!formData.description && !formData.title)) {
         return alert("Please add an image and at least a Title or Description!");
     }
@@ -113,7 +109,6 @@ const ReportForm = ({ onRefresh, user }) => {
             getAiAdvice(image, formData.title, formData.description),
             minLoadingTime
         ]);
-        
         setAiAdvice(advice);
     } catch (error) {
         console.error("AI Generation Error:", error);
@@ -123,12 +118,28 @@ const ReportForm = ({ onRefresh, user }) => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  // --- CONFIRMATION HANDLER ---
+  const handleConfirmSubmit = (e) => {
     e.preventDefault();
+
+    // 1. Validation
     if (!image || !formData.title || !formData.description || !formData.state || !formData.city || !formData.pincode || !formData.addressDetail) {
-      return alert("Please fill all fields, including location details!");
+      return alert("Please fill all fields, including full location details and an image!");
     }
-    
+
+    // 2. Open Confirmation Modal
+    setConfirmModal({
+        isOpen: true,
+        type: 'info', // Info type for general confirmation
+        title: 'Confirm Submission',
+        message: `You are about to report a "${formData.category}" issue in ${formData.city}. Ensure all details are accurate for faster resolution.`,
+        confirmText: 'Yes, Submit Report',
+        onConfirm: executeSubmit // Pass the actual submit function here
+    });
+  };
+
+  // --- ACTUAL SUBMISSION LOGIC ---
+  const executeSubmit = async () => {
     setLoading(true);
     try {
       const imageUrl = await uploadToCloudinary(image);
@@ -162,14 +173,18 @@ const ReportForm = ({ onRefresh, user }) => {
         votes: 0
       });
 
-      alert("Report Submitted Successfully!");
+      // Reset form after success
       setStep(1);
-      // Reset form completely after successful submit
       setFormData({ category: '', title: '', description: '', state: '', city: '', pincode: '', addressDetail: '' });
       setImage(null);
       setPreview(null);
       setAiAdvice(null);
+      
       if (onRefresh) onRefresh();
+      
+      // Optional: Show success alert via another modal or toast if you like, but alert is fine for now
+      // alert("Report Submitted Successfully!"); 
+
     } catch (err) {
       console.error(err);
       alert("Error submitting report: " + err.message);
@@ -186,6 +201,12 @@ const ReportForm = ({ onRefresh, user }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       
+      {/* Confirmation Modal */}
+      <ConfirmationModal 
+        {...confirmModal} 
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
+      />
+
       {/* STEP 1: CATEGORY SELECTION */}
       {step === 1 && (
         <div className="animate-in fade-in zoom-in duration-500">
@@ -303,7 +324,13 @@ const ReportForm = ({ onRefresh, user }) => {
                     <><Sparkles className="w-5 h-5 group-hover:text-indigo-200 transition-colors" /> {t('citizen.askAi') || "Ask Gemini"}</>
                 )}
               </button>
-              <button onClick={handleSubmit} disabled={loading} className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/40 hover:shadow-blue-900/60 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
+              
+              {/* TRIGGER CONFIRMATION MODAL ON CLICK */}
+              <button 
+                onClick={handleConfirmSubmit} 
+                disabled={loading} 
+                className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/40 hover:shadow-blue-900/60 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
                 {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <Send className="w-5 h-5" />} {t('citizen.submit') || "Submit Report"}
               </button>
             </div>
