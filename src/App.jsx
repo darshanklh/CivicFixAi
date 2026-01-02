@@ -58,6 +58,12 @@ function App() {
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   
   useEffect(() => {
+    // --- FIX: Restore Role on Reload ---
+    const savedRole = localStorage.getItem('civic_role');
+    if (savedRole) {
+      setRole(savedRole);
+    }
+
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCachedUser(user);
@@ -67,11 +73,12 @@ function App() {
       }
     });
     return () => unsubscribeAuth();
-  }, [currentUser]);
+  }, [currentUser]); // Dependency logic preserved
 
   const handleRoleSelect = (selectedRole, userData) => {
     setRole(selectedRole);
     setCurrentUser(userData);
+    localStorage.setItem('civic_role', selectedRole); // --- FIX: Save Role ---
   };
 
   const handleNavigation = (newView) => {
@@ -124,6 +131,7 @@ function App() {
     setRole(null);
     setCurrentUser(null);
     setCachedUser(null);
+    localStorage.removeItem('civic_role'); // --- FIX: Clear Saved Role ---
   };
 
   const myReports = currentUser 
@@ -370,7 +378,7 @@ function App() {
                                     )}
                             </div>
                         ) : (
-                            <ReportForm user={currentUser} />
+                            <ReportForm user={currentUser} onRefresh={() => handleNavigation('dashboard')} />
                         )}
                     </div>
                 </main>
