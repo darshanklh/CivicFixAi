@@ -10,7 +10,7 @@ import {
   Droplets, Construction, Trash2, Lightbulb, HelpCircle, MapPin, ArrowLeft
 } from 'lucide-react';
 import { INDIAN_LOCATIONS } from '../data/locations';
-import ConfirmationModal from './ConfirmationModal'; // <--- NEW IMPORT
+import ConfirmationModal from './ConfirmationModal'; 
 
 const ReportForm = ({ onRefresh, user }) => {
   const { t } = useTranslation();
@@ -181,9 +181,6 @@ const ReportForm = ({ onRefresh, user }) => {
       setAiAdvice(null);
       
       if (onRefresh) onRefresh();
-      
-      // Optional: Show success alert via another modal or toast if you like, but alert is fine for now
-      // alert("Report Submitted Successfully!"); 
 
     } catch (err) {
       console.error(err);
@@ -305,7 +302,13 @@ const ReportForm = ({ onRefresh, user }) => {
                 <div className="group relative h-full">
                 <label className={`flex flex-col items-center justify-center w-full h-full min-h-[140px] border-2 border-dashed rounded-xl cursor-pointer transition-all ${preview ? 'border-blue-500 bg-slate-800/50' : 'border-slate-700 hover:border-blue-400 hover:bg-slate-800/30'}`}>
                     {preview ? <img src={preview} alt="Preview" className="h-full w-full object-cover rounded-xl" /> : <div className="flex flex-col items-center justify-center text-slate-400"><UploadCloud className="w-8 h-8 mb-2 group-hover:text-blue-400 transition-colors" /><p className="text-xs font-bold">{t('citizen.uploadPhoto') || "Upload Photo"}</p></div>}
-                    <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                    <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*" 
+                        capture="environment" // Forces rear camera on mobile
+                        onChange={handleImageChange} 
+                    />
                 </label>
                 </div>
                 <textarea 
