@@ -15,39 +15,58 @@ import ConfirmationModal from './ConfirmationModal';
 
 const ReportForm = ({ onRefresh, user }) => {
   const { t } = useTranslation();
+  const [step, setStep] = useState(1); 
   
-  // --- RESTORE STATE FROM LOCAL STORAGE ---
-  const savedData = JSON.parse(localStorage.getItem('civicReportDraft') || '{}');
-  const initialStep = savedData.category ? 2 : 1;
-  const [step, setStep] = useState(initialStep); 
-  
-  // --- INPUT REFS ---
+  // Input Refs
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    category: savedData.category || '', 
-    title: savedData.title || '', 
-    description: savedData.description || '',
-    state: savedData.state || '',      
-    city: savedData.city || '',       
-    pincode: savedData.pincode || '',    
-    addressDetail: savedData.addressDetail || '' 
+    category: '', 
+    title: '', 
+    description: '',
+    state: '',      
+    city: '',       
+    pincode: '',    
+    addressDetail: '' 
   });
 
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // AI Loading State
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAdvice, setAiAdvice] = useState(null);
+
+  // Modal State
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const CLOUD_NAME = "dtdkkjk1p"; 
   const UPLOAD_PRESET = "ml_default"; 
 
-  // --- AUTO-SAVE ---
+  // --- FIX: RESTORE DRAFT ON LOAD ---
   useEffect(() => {
-    localStorage.setItem('civicReportDraft', JSON.stringify(formData));
+    const savedDraft = localStorage.getItem('civic_form_draft');
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        setFormData(parsed);
+        if (parsed.category) {
+          setStep(2);
+        }
+      } catch (e) {
+        console.error("Failed to parse draft", e);
+      }
+    }
+  }, []);
+
+  // --- FIX: SAVE DRAFT ON CHANGE ---
+  useEffect(() => {
+    // Only save if there's actual data to avoid saving empty states over valid data
+    if (formData.category || formData.title || formData.description) {
+        localStorage.setItem('civic_form_draft', JSON.stringify(formData));
+    }
   }, [formData]);
 
   const categories = [
@@ -62,8 +81,13 @@ const ReportForm = ({ onRefresh, user }) => {
   const handleCategorySelect = (selectedCategory) => {
     if (selectedCategory !== formData.category) {
         setFormData({ 
-            ...formData, 
             category: selectedCategory, 
+            title: '', 
+            description: '', 
+            state: '', 
+            city: '', 
+            pincode: '', 
+            addressDetail: '' 
         });
         setImage(null);
         setPreview(null);
@@ -81,24 +105,12 @@ const ReportForm = ({ onRefresh, user }) => {
     }
   };
 
-  const handleRemoveImage = (e) => {
-    if(e) e.preventDefault();
+  const handleRemoveImage = () => {
     setImage(null);
     setPreview(null);
     setAiAdvice(null);
     if(cameraInputRef.current) cameraInputRef.current.value = "";
     if(galleryInputRef.current) galleryInputRef.current.value = "";
-  };
-
-  // --- TRIGGER FUNCTIONS ---
-  const triggerCamera = (e) => {
-      e.preventDefault(); 
-      if(cameraInputRef.current) cameraInputRef.current.click();
-  };
-
-  const triggerGallery = (e) => {
-      e.preventDefault();
-      if(galleryInputRef.current) galleryInputRef.current.click();
   };
 
   const handleStateChange = (e) => {
@@ -126,6 +138,7 @@ const ReportForm = ({ onRefresh, user }) => {
     }
 
     setAiLoading(true);
+    
     try {
         const minLoadingTime = new Promise(resolve => setTimeout(resolve, 2500));
         const [advice] = await Promise.all([
@@ -134,8 +147,8 @@ const ReportForm = ({ onRefresh, user }) => {
         ]);
         setAiAdvice(advice);
     } catch (error) {
-        console.error("AI Error:", error);
-        alert("Could not reach AI. Check connection.");
+        console.error("AI Generation Error:", error);
+        alert("Could not reach Gemini AI. Please check your connection.");
     } finally {
         setAiLoading(false);
     }
@@ -143,15 +156,17 @@ const ReportForm = ({ onRefresh, user }) => {
 
   const handleConfirmSubmit = (e) => {
     e.preventDefault();
+
     if (!image || !formData.title || !formData.description || !formData.state || !formData.city || !formData.pincode || !formData.addressDetail) {
-      return alert("Please fill all fields, including image & location!");
+      return alert("Please fill all fields, including full location details and an image!");
     }
+
     setConfirmModal({
         isOpen: true,
         type: 'info', 
         title: 'Confirm Submission',
-        message: `Reporting "${formData.category}" in ${formData.city}. Is this correct?`,
-        confirmText: 'Yes, Submit',
+        message: `You are about to report a "${formData.category}" issue in ${formData.city}. Ensure all details are accurate for faster resolution.`,
+        confirmText: 'Yes, Submit Report',
         onConfirm: executeSubmit
     });
   };
@@ -190,19 +205,19 @@ const ReportForm = ({ onRefresh, user }) => {
         votes: 0
       });
 
-      // Clear Draft & Reset
-      localStorage.removeItem('civicReportDraft');
+      // --- FIX: CLEAR DRAFT AND RESET ---
       setStep(1);
       setFormData({ category: '', title: '', description: '', state: '', city: '', pincode: '', addressDetail: '' });
       setImage(null);
       setPreview(null);
       setAiAdvice(null);
+      localStorage.removeItem('civic_form_draft'); 
       
       if (onRefresh) onRefresh();
 
     } catch (err) {
       console.error(err);
-      alert("Error submitting: " + err.message);
+      alert("Error submitting report: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -219,27 +234,6 @@ const ReportForm = ({ onRefresh, user }) => {
       <ConfirmationModal 
         {...confirmModal} 
         onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
-      />
-
-      {/* --- HIDDEN INPUTS MOVED TO TOP-LEVEL (SAFE ZONE) --- */}
-      {/* 1. FORCE CAMERA INPUT */}
-      <input 
-          ref={cameraInputRef}
-          type="file" 
-          accept="image/*" 
-          capture="environment" // <--- CRITICAL: Forces rear camera on mobile
-          className="hidden" 
-          onChange={handleImageChange} 
-      />
-      
-      {/* 2. FORCE GALLERY INPUT */}
-      <input 
-          ref={galleryInputRef}
-          type="file" 
-          accept="image/*" 
-          // CRITICAL: NO capture attribute = opens system picker (Gallery/Files)
-          className="hidden" 
-          onChange={handleImageChange} 
       />
 
       {step === 1 && (
@@ -261,7 +255,9 @@ const ReportForm = ({ onRefresh, user }) => {
                     <div className="bg-white/10 w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20 shadow-inner">
                         {cat.icon}
                     </div>
-                    <div><h3 className="text-2xl font-bold text-white mb-1 shadow-black/10 drop-shadow-md">{cat.label}</h3></div>
+                    <div>
+                        <h3 className="text-2xl font-bold text-white mb-1 shadow-black/10 drop-shadow-md">{cat.label}</h3>
+                    </div>
                 </div>
               </button>
             ))}
@@ -273,8 +269,12 @@ const ReportForm = ({ onRefresh, user }) => {
         <div className="max-w-2xl mx-auto bg-slate-900/60 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden animate-in slide-in-from-bottom-10 duration-500">
           
           <div className="p-6 border-b border-slate-700/50 flex items-center gap-4 bg-slate-900/40">
-            <button onClick={() => setStep(1)} className="p-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl transition-colors text-slate-300"><ArrowLeft className="w-5 h-5" /></button>
-            <div><h2 className="text-xl font-bold text-white">{t('citizen.reportTitle') || "Report Issue"}: {t(`cat.${formData.category}`) || formData.category}</h2></div>
+            <button onClick={() => setStep(1)} className="p-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl transition-colors text-slate-300">
+                <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+                <h2 className="text-xl font-bold text-white">{t('citizen.reportTitle') || "Report Issue"}: {t(`cat.${formData.category}`) || formData.category}</h2>
+            </div>
           </div>
           
           <form className="p-8 space-y-6">
@@ -282,65 +282,88 @@ const ReportForm = ({ onRefresh, user }) => {
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Issue Title</label>
               <input 
                 type="text" 
-                className="w-full p-4 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 outline-none font-semibold text-white transition-all"
-                placeholder="e.g., Heavy water leakage"
+                className="w-full p-4 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-white placeholder-slate-600 transition-all"
+                placeholder={t('citizen.issueTitlePlaceholder') || "e.g., Heavy water leakage near Main Gate"}
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
               />
             </div>
 
             <div className="space-y-4">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1"><MapPin className="w-3 h-3 text-blue-400"/> Location Details</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1"><MapPin className="w-3 h-3 text-blue-400"/> {t('citizen.locDetails') || "Location Details"}</label>
+                
                 <div className="grid grid-cols-2 gap-4">
-                    <select value={formData.state} onChange={handleStateChange} className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl outline-none text-sm font-medium text-white custom-select">
-                        <option value="" className="bg-slate-900 text-slate-400">Select State</option>
+                    <select value={formData.state} onChange={handleStateChange} className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-white custom-select">
+                        <option value="" className="bg-slate-900 text-slate-400">{t('citizen.selectState') || "Select State"}</option>
                         {Object.keys(INDIAN_LOCATIONS).sort().map(state => <option key={state} value={state} className="bg-slate-900">{state}</option>)}
                     </select>
-                    <select value={formData.city} onChange={handleCityChange} disabled={!formData.state} className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl outline-none text-sm font-medium text-white disabled:opacity-50">
-                        <option value="" className="bg-slate-900 text-slate-400">Select City</option>
+
+                    <select value={formData.city} onChange={handleCityChange} disabled={!formData.state} className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="" className="bg-slate-900 text-slate-400">{t('citizen.selectCity') || "Select City"}</option>
                         {formData.state && Object.keys(INDIAN_LOCATIONS[formData.state]).sort().map(city => <option key={city} value={city} className="bg-slate-900">{city}</option>)}
                     </select>
                 </div>
+
                 <div className="relative">
-                      <input list="pincode-options" type="text" placeholder="Enter Pincode" value={formData.pincode} onChange={(e) => setFormData({...formData, pincode: e.target.value})} disabled={!formData.city} className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl outline-none text-sm font-medium text-white disabled:opacity-50" />
-                      <datalist id="pincode-options">{getPincodeOptions().map(pin => <option key={pin} value={pin} />)}</datalist>
+                      <input 
+                        list="pincode-options"
+                        type="text"
+                        placeholder={t('citizen.enterPincode') || "Enter or Select Pincode"}
+                        value={formData.pincode}
+                        onChange={(e) => setFormData({...formData, pincode: e.target.value})}
+                        disabled={!formData.city}
+                        className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-white disabled:opacity-50"
+                      />
+                      <datalist id="pincode-options">
+                        {getPincodeOptions().map(pin => <option key={pin} value={pin} />)}
+                      </datalist>
                 </div>
-                <input type="text" className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl outline-none text-sm font-medium text-white" placeholder="Street Name, Landmark..." value={formData.addressDetail} onChange={(e) => setFormData({...formData, addressDetail: e.target.value})} />
+
+                <input 
+                  type="text" 
+                  className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-white placeholder-slate-600"
+                  placeholder={t('citizen.addressPlaceholder') || "Street Name, Landmark, House No."}
+                  value={formData.addressDetail}
+                  onChange={(e) => setFormData({...formData, addressDetail: e.target.value})}
+                />
             </div>
 
-            {/* --- MEDIA UPLOAD SECTION (RESPONSIVE) --- */}
+            {/* --- RESPONSIVE UPLOAD UI --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="group relative h-full">
-                    {/* The Visual Container */}
-                    <div className={`flex flex-col items-center justify-center w-full h-full min-h-[140px] border-2 border-dashed rounded-xl transition-all p-4 ${preview ? 'border-blue-500 bg-slate-800/50' : 'border-slate-700 bg-slate-900/30'}`}>
+                    <div className={`flex flex-col items-center justify-center w-full h-full min-h-[140px] border-2 border-dashed rounded-xl transition-all p-4 ${preview ? 'border-blue-500 bg-slate-800/50' : 'border-slate-700 bg-slate-900/30 hover:border-blue-500 hover:bg-slate-800/30'}`}>
                         {preview ? (
                             <div className="relative w-full h-full flex flex-col items-center">
                                 <img src={preview} alt="Preview" className="h-40 w-full object-cover rounded-xl" />
-                                <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 bg-red-600/80 text-white p-1 rounded-full hover:bg-red-500"><XCircle className="w-5 h-5" /></button>
+                                <button 
+                                    type="button"
+                                    onClick={handleRemoveImage}
+                                    className="absolute top-2 right-2 bg-red-600/80 text-white p-1 rounded-full hover:bg-red-500"
+                                >
+                                    <XCircle className="w-5 h-5" />
+                                </button>
                             </div>
                         ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center">
                                 
-                                {/* 1. MOBILE VIEW (< 768px): TWO DISTINCT BUTTONS */}
+                                {/* --- MOBILE VIEW (< 768px): SHOWS TWO BUTTONS --- */}
                                 <div className="flex flex-col items-center md:hidden w-full">
                                      <p className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">{t('citizen.uploadPhoto') || "Upload Evidence"}</p>
                                      <div className="flex gap-4 w-full justify-center">
-                                        
-                                        {/* CAMERA BUTTON -> Triggers hidden camera input */}
+                                        {/* Camera Button - Updated for Stability (Removed capture="environment") */}
                                         <button 
                                             type="button"
-                                            onClick={triggerCamera}
-                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all w-24 shadow-lg"
+                                            onClick={() => cameraInputRef.current.click()}
+                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all"
                                         >
                                             <Camera className="w-6 h-6 text-blue-400" />
                                             <span className="text-[10px] font-bold text-slate-300">Camera</span>
                                         </button>
-                                        
-                                        {/* GALLERY BUTTON -> Triggers hidden gallery input */}
+                                        {/* Gallery Button */}
                                         <button 
                                             type="button"
-                                            onClick={triggerGallery}
-                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all w-24 shadow-lg"
+                                            onClick={() => galleryInputRef.current.click()}
+                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all"
                                         >
                                             <ImageIcon className="w-6 h-6 text-purple-400" />
                                             <span className="text-[10px] font-bold text-slate-300">Gallery</span>
@@ -348,10 +371,10 @@ const ReportForm = ({ onRefresh, user }) => {
                                      </div>
                                 </div>
 
-                                {/* 2. DESKTOP VIEW (>= 768px): STANDARD CLICKABLE AREA */}
+                                {/* --- DESKTOP VIEW (>= 768px): STANDARD CLICKABLE AREA --- */}
                                 <div 
-                                    className="hidden md:flex flex-col items-center cursor-pointer w-full h-full justify-center hover:bg-slate-800/30 transition-colors rounded-xl"
-                                    onClick={triggerGallery} // Desktop defaults to file picker
+                                    className="hidden md:flex flex-col items-center cursor-pointer w-full h-full justify-center"
+                                    onClick={() => galleryInputRef.current.click()} // Desktop -> Standard File Picker
                                 >
                                      <UploadCloud className="w-10 h-10 text-slate-400 mb-3 group-hover:text-blue-400 transition-colors" />
                                      <p className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">{t('citizen.uploadPhoto') || "Click to Upload Photo"}</p>
@@ -360,12 +383,31 @@ const ReportForm = ({ onRefresh, user }) => {
 
                             </div>
                         )}
+                        
+                        {/* Hidden Input 1: Camera (Updated for Stability - Removed capture) */}
+                        <input 
+                            ref={cameraInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            // capture="environment"  <-- REMOVED TO FIX MEMORY CRASH
+                            className="hidden" 
+                            onChange={handleImageChange} 
+                        />
+
+                        {/* Hidden Input 2: Gallery (Standard) */}
+                        <input 
+                            ref={galleryInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleImageChange} 
+                        />
                     </div>
                 </div>
 
                 <textarea 
-                    className="w-full p-4 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 outline-none text-sm resize-none h-full min-h-[140px] text-white"
-                    placeholder="Describe the problem in detail..."
+                    className="w-full p-4 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm resize-none h-full min-h-[140px] text-white placeholder-slate-600"
+                    placeholder={t('citizen.descPlaceholder') || "Describe the problem in detail..."}
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                 />
@@ -373,10 +415,18 @@ const ReportForm = ({ onRefresh, user }) => {
 
             <div className="grid grid-cols-2 gap-4 pt-4">
               <button onClick={handleAskAI} disabled={aiLoading || loading} className="group bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 border border-indigo-500/30 transition-all active:scale-95">
-                {aiLoading ? <><Loader2 className="animate-spin w-5 h-5" /> Analyzing...</> : <><Sparkles className="w-5 h-5 group-hover:text-indigo-200" /> {t('citizen.askAi') || "Ask Gemini"}</>}
+                {aiLoading ? (
+                    <><Loader2 className="animate-spin w-5 h-5" /> Analyzing...</>
+                ) : (
+                    <><Sparkles className="w-5 h-5 group-hover:text-indigo-200 transition-colors" /> {t('citizen.askAi') || "Ask Gemini"}</>
+                )}
               </button>
               
-              <button onClick={handleConfirmSubmit} disabled={loading} className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-70">
+              <button 
+                onClick={handleConfirmSubmit} 
+                disabled={loading} 
+                className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/40 hover:shadow-blue-900/60 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
                 {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <Send className="w-5 h-5" />} {t('citizen.submit') || "Submit Report"}
               </button>
             </div>
