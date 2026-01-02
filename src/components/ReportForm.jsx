@@ -1,5 +1,5 @@
 // src/components/ReportForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Disc } from 'lucide-react';
 import { getAiAdvice } from '../services/aiService';
@@ -7,7 +7,8 @@ import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   Loader2, Send, UploadCloud, Sparkles, ShieldAlert,
-  Droplets, Construction, Trash2, Lightbulb, HelpCircle, MapPin, ArrowLeft
+  Droplets, Construction, Trash2, Lightbulb, HelpCircle, MapPin, ArrowLeft,
+  Camera, Image as ImageIcon, XCircle
 } from 'lucide-react';
 import { INDIAN_LOCATIONS } from '../data/locations';
 import ConfirmationModal from './ConfirmationModal'; 
@@ -16,6 +17,10 @@ const ReportForm = ({ onRefresh, user }) => {
   const { t } = useTranslation();
   const [step, setStep] = useState(1); 
   
+  // Input Refs
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+
   const [formData, setFormData] = useState({
     category: '', 
     title: '', 
@@ -76,6 +81,14 @@ const ReportForm = ({ onRefresh, user }) => {
     }
   };
 
+  const handleRemoveImage = () => {
+    setImage(null);
+    setPreview(null);
+    setAiAdvice(null);
+    if(cameraInputRef.current) cameraInputRef.current.value = "";
+    if(galleryInputRef.current) galleryInputRef.current.value = "";
+  };
+
   const handleStateChange = (e) => {
     setFormData({ ...formData, state: e.target.value, city: '', pincode: '' });
   };
@@ -94,7 +107,6 @@ const ReportForm = ({ onRefresh, user }) => {
     return result.secure_url;
   };
 
-  // --- AI Handler ---
   const handleAskAI = async (e) => {
     e.preventDefault();
     if (!image || (!formData.description && !formData.title)) {
@@ -118,27 +130,23 @@ const ReportForm = ({ onRefresh, user }) => {
     }
   };
 
-  // --- CONFIRMATION HANDLER ---
   const handleConfirmSubmit = (e) => {
     e.preventDefault();
 
-    // 1. Validation
     if (!image || !formData.title || !formData.description || !formData.state || !formData.city || !formData.pincode || !formData.addressDetail) {
       return alert("Please fill all fields, including full location details and an image!");
     }
 
-    // 2. Open Confirmation Modal
     setConfirmModal({
         isOpen: true,
-        type: 'info', // Info type for general confirmation
+        type: 'info', 
         title: 'Confirm Submission',
         message: `You are about to report a "${formData.category}" issue in ${formData.city}. Ensure all details are accurate for faster resolution.`,
         confirmText: 'Yes, Submit Report',
-        onConfirm: executeSubmit // Pass the actual submit function here
+        onConfirm: executeSubmit
     });
   };
 
-  // --- ACTUAL SUBMISSION LOGIC ---
   const executeSubmit = async () => {
     setLoading(true);
     try {
@@ -173,7 +181,6 @@ const ReportForm = ({ onRefresh, user }) => {
         votes: 0
       });
 
-      // Reset form after success
       setStep(1);
       setFormData({ category: '', title: '', description: '', state: '', city: '', pincode: '', addressDetail: '' });
       setImage(null);
@@ -198,13 +205,11 @@ const ReportForm = ({ onRefresh, user }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       
-      {/* Confirmation Modal */}
       <ConfirmationModal 
         {...confirmModal} 
         onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
       />
 
-      {/* STEP 1: CATEGORY SELECTION */}
       {step === 1 && (
         <div className="animate-in fade-in zoom-in duration-500">
            <div className="text-center mb-10">
@@ -234,7 +239,6 @@ const ReportForm = ({ onRefresh, user }) => {
         </div>
       )}
 
-      {/* STEP 2: DARK FORM */}
       {step === 2 && (
         <div className="max-w-2xl mx-auto bg-slate-900/60 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden animate-in slide-in-from-bottom-10 duration-500">
           
@@ -298,19 +302,83 @@ const ReportForm = ({ onRefresh, user }) => {
                 />
             </div>
 
+            {/* --- RESPONSIVE UPLOAD UI --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="group relative h-full">
-                <label className={`flex flex-col items-center justify-center w-full h-full min-h-[140px] border-2 border-dashed rounded-xl cursor-pointer transition-all ${preview ? 'border-blue-500 bg-slate-800/50' : 'border-slate-700 hover:border-blue-400 hover:bg-slate-800/30'}`}>
-                    {preview ? <img src={preview} alt="Preview" className="h-full w-full object-cover rounded-xl" /> : <div className="flex flex-col items-center justify-center text-slate-400"><UploadCloud className="w-8 h-8 mb-2 group-hover:text-blue-400 transition-colors" /><p className="text-xs font-bold">{t('citizen.uploadPhoto') || "Upload Photo"}</p></div>}
-                    <input 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/*" 
-                        // Removed capture="environment" to allow Gallery option
-                        onChange={handleImageChange} 
-                    />
-                </label>
+                    <div className={`flex flex-col items-center justify-center w-full h-full min-h-[140px] border-2 border-dashed rounded-xl transition-all p-4 ${preview ? 'border-blue-500 bg-slate-800/50' : 'border-slate-700 bg-slate-900/30 hover:border-blue-500 hover:bg-slate-800/30'}`}>
+                        {preview ? (
+                            <div className="relative w-full h-full flex flex-col items-center">
+                                <img src={preview} alt="Preview" className="h-40 w-full object-cover rounded-xl" />
+                                <button 
+                                    type="button"
+                                    onClick={handleRemoveImage}
+                                    className="absolute top-2 right-2 bg-red-600/80 text-white p-1 rounded-full hover:bg-red-500"
+                                >
+                                    <XCircle className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center">
+                                
+                                {/* --- MOBILE VIEW (< 768px): SHOWS TWO BUTTONS --- */}
+                                <div className="flex flex-col items-center md:hidden w-full">
+                                     <p className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">{t('citizen.uploadPhoto') || "Upload Evidence"}</p>
+                                     <div className="flex gap-4 w-full justify-center">
+                                        {/* Camera Button */}
+                                        <button 
+                                            type="button"
+                                            onClick={() => cameraInputRef.current.click()}
+                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all"
+                                        >
+                                            <Camera className="w-6 h-6 text-blue-400" />
+                                            <span className="text-[10px] font-bold text-slate-300">Camera</span>
+                                        </button>
+                                        {/* Gallery Button */}
+                                        <button 
+                                            type="button"
+                                            onClick={() => galleryInputRef.current.click()}
+                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all"
+                                        >
+                                            <ImageIcon className="w-6 h-6 text-purple-400" />
+                                            <span className="text-[10px] font-bold text-slate-300">Gallery</span>
+                                        </button>
+                                     </div>
+                                </div>
+
+                                {/* --- DESKTOP VIEW (>= 768px): STANDARD CLICKABLE AREA --- */}
+                                <div 
+                                    className="hidden md:flex flex-col items-center cursor-pointer w-full h-full justify-center"
+                                    onClick={() => galleryInputRef.current.click()} // Desktop -> Standard File Picker
+                                >
+                                     <UploadCloud className="w-10 h-10 text-slate-400 mb-3 group-hover:text-blue-400 transition-colors" />
+                                     <p className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">{t('citizen.uploadPhoto') || "Click to Upload Photo"}</p>
+                                     <p className="text-[10px] text-slate-500 mt-1">Supports: JPG, PNG, WEBP</p>
+                                </div>
+
+                            </div>
+                        )}
+                        
+                        {/* Hidden Input 1: Camera (Capture Env) */}
+                        <input 
+                            ref={cameraInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            capture="environment" 
+                            className="hidden" 
+                            onChange={handleImageChange} 
+                        />
+
+                        {/* Hidden Input 2: Gallery (Standard) */}
+                        <input 
+                            ref={galleryInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleImageChange} 
+                        />
+                    </div>
                 </div>
+
                 <textarea 
                     className="w-full p-4 bg-slate-950/50 border border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm resize-none h-full min-h-[140px] text-white placeholder-slate-600"
                     placeholder={t('citizen.descPlaceholder') || "Describe the problem in detail..."}
@@ -328,7 +396,6 @@ const ReportForm = ({ onRefresh, user }) => {
                 )}
               </button>
               
-              {/* TRIGGER CONFIRMATION MODAL ON CLICK */}
               <button 
                 onClick={handleConfirmSubmit} 
                 disabled={loading} 
