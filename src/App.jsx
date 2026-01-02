@@ -144,7 +144,6 @@ function App() {
 
   return (
     <div className="h-screen h-[100dvh] flex flex-col overflow-hidden relative font-sans text-slate-100">
-      
       {/* Background for Citizen Only */}
       {role === 'citizen' && <MidnightBackground />}
 
@@ -376,19 +375,21 @@ function App() {
                     </div>
                 </main>
                 
-                {/* RIGHT SIDEBAR (Desktop Only - 'hidden xl:flex') */}
-                <aside className="hidden xl:flex w-96 bg-slate-900/60 backdrop-blur-2xl border-l border-slate-700/50 h-full flex-col shadow-2xl z-20 flex-shrink-0">
-                        <div className="p-6 border-b border-slate-700/50 bg-slate-900/40">
-                            <h2 className="font-extrabold flex items-center gap-3 text-white">
-                                <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20"><TrendingUp className="w-5 h-5"/></div> 
-                                Community Reports
-                            </h2>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
-                            {issues.map((issue) => (
-                                <IssueCard key={issue.id} issue={issue} onClick={() => setSelectedIssue(issue)} compact={true} />
-                            ))}
-                        </div>
+                {/* --- FIX: RIGHT SIDEBAR SCROLLABLE --- */}
+                {/* Added overflow-hidden to parent to force constraint, ensuring inner div scrolls */}
+                <aside className="hidden xl:flex w-96 bg-slate-900/60 backdrop-blur-2xl border-l border-slate-700/50 h-full flex-col shadow-2xl z-20 flex-shrink-0 overflow-hidden">
+                    <div className="p-6 border-b border-slate-700/50 bg-slate-900/40 flex-shrink-0">
+                        <h2 className="font-extrabold flex items-center gap-3 text-white">
+                            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20"><TrendingUp className="w-5 h-5"/></div> 
+                            Community Reports
+                        </h2>
+                    </div>
+                    {/* flex-1 + overflow-y-auto + min-h-0 ensures this div takes available space and scrolls internally */}
+                    <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4 scroll-smooth custom-scrollbar">
+                        {issues.map((issue) => (
+                            <IssueCard key={issue.id} issue={issue} onClick={() => setSelectedIssue(issue)} compact={true} />
+                        ))}
+                    </div>
                 </aside>
             </div>
         )}
