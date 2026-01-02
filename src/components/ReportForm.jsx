@@ -16,13 +16,12 @@ import ConfirmationModal from './ConfirmationModal';
 const ReportForm = ({ onRefresh, user }) => {
   const { t } = useTranslation();
   
-  // --- 1. CRASH PROTECTION: Load Saved Draft ---
+  // --- RESTORE STATE FROM LOCAL STORAGE ---
   const savedData = JSON.parse(localStorage.getItem('civicReportDraft') || '{}');
-  // If we have saved text but no category, default to step 1
   const initialStep = savedData.category ? 2 : 1;
   const [step, setStep] = useState(initialStep); 
   
-  // --- 2. INPUT REFS (Access hidden inputs) ---
+  // --- INPUT REFS ---
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
@@ -39,18 +38,14 @@ const ReportForm = ({ onRefresh, user }) => {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  // AI Loading State
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAdvice, setAiAdvice] = useState(null);
-
-  // Modal State
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const CLOUD_NAME = "dtdkkjk1p"; 
   const UPLOAD_PRESET = "ml_default"; 
 
-  // --- 3. AUTO-SAVE: Persist text on every change ---
+  // --- AUTO-SAVE ---
   useEffect(() => {
     localStorage.setItem('civicReportDraft', JSON.stringify(formData));
   }, [formData]);
@@ -67,9 +62,8 @@ const ReportForm = ({ onRefresh, user }) => {
   const handleCategorySelect = (selectedCategory) => {
     if (selectedCategory !== formData.category) {
         setFormData({ 
-            ...formData, // Keep other fields if they existed, just update category/reset specific fields if needed
+            ...formData, 
             category: selectedCategory, 
-            // Optional: You can choose to clear title/desc or keep them. keeping them is safer for "Back" button usage.
         });
         setImage(null);
         setPreview(null);
@@ -92,19 +86,18 @@ const ReportForm = ({ onRefresh, user }) => {
     setImage(null);
     setPreview(null);
     setAiAdvice(null);
-    // Reset file inputs safely
     if(cameraInputRef.current) cameraInputRef.current.value = "";
     if(galleryInputRef.current) galleryInputRef.current.value = "";
   };
 
-  // --- BUTTON HANDLERS FOR MOBILE ---
+  // --- TRIGGER FUNCTIONS ---
   const triggerCamera = (e) => {
-      e.preventDefault(); // Stop form submission
+      e.preventDefault(); 
       if(cameraInputRef.current) cameraInputRef.current.click();
   };
 
   const triggerGallery = (e) => {
-      e.preventDefault(); // Stop form submission
+      e.preventDefault();
       if(galleryInputRef.current) galleryInputRef.current.click();
   };
 
@@ -197,7 +190,7 @@ const ReportForm = ({ onRefresh, user }) => {
         votes: 0
       });
 
-      // --- CLEAR DRAFT AFTER SUCCESS ---
+      // Clear Draft & Reset
       localStorage.removeItem('civicReportDraft');
       setStep(1);
       setFormData({ category: '', title: '', description: '', state: '', city: '', pincode: '', addressDetail: '' });
@@ -229,22 +222,22 @@ const ReportForm = ({ onRefresh, user }) => {
       />
 
       {/* --- HIDDEN INPUTS MOVED TO TOP-LEVEL (SAFE ZONE) --- */}
-      {/* 1. FORCE CAMERA */}
+      {/* 1. FORCE CAMERA INPUT */}
       <input 
           ref={cameraInputRef}
           type="file" 
           accept="image/*" 
-          capture="environment" // <--- The magic attribute for Rear Camera
+          capture="environment" // <--- CRITICAL: Forces rear camera on mobile
           className="hidden" 
           onChange={handleImageChange} 
       />
       
-      {/* 2. FORCE GALLERY (Standard picker) */}
+      {/* 2. FORCE GALLERY INPUT */}
       <input 
           ref={galleryInputRef}
           type="file" 
           accept="image/*" 
-          // No capture attribute = opens system picker
+          // CRITICAL: NO capture attribute = opens system picker (Gallery/Files)
           className="hidden" 
           onChange={handleImageChange} 
       />
@@ -315,7 +308,7 @@ const ReportForm = ({ onRefresh, user }) => {
                 <input type="text" className="w-full p-3 bg-slate-950/50 border border-slate-800 rounded-xl outline-none text-sm font-medium text-white" placeholder="Street Name, Landmark..." value={formData.addressDetail} onChange={(e) => setFormData({...formData, addressDetail: e.target.value})} />
             </div>
 
-            {/* --- MEDIA UPLOAD SECTION --- */}
+            {/* --- MEDIA UPLOAD SECTION (RESPONSIVE) --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="group relative h-full">
                     {/* The Visual Container */}
@@ -328,22 +321,26 @@ const ReportForm = ({ onRefresh, user }) => {
                         ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center">
                                 
-                                {/* 1. MOBILE VIEW: TWO BUTTONS */}
+                                {/* 1. MOBILE VIEW (< 768px): TWO DISTINCT BUTTONS */}
                                 <div className="flex flex-col items-center md:hidden w-full">
                                      <p className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">{t('citizen.uploadPhoto') || "Upload Evidence"}</p>
                                      <div className="flex gap-4 w-full justify-center">
+                                        
+                                        {/* CAMERA BUTTON -> Triggers hidden camera input */}
                                         <button 
                                             type="button"
                                             onClick={triggerCamera}
-                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all w-24"
+                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all w-24 shadow-lg"
                                         >
                                             <Camera className="w-6 h-6 text-blue-400" />
                                             <span className="text-[10px] font-bold text-slate-300">Camera</span>
                                         </button>
+                                        
+                                        {/* GALLERY BUTTON -> Triggers hidden gallery input */}
                                         <button 
                                             type="button"
                                             onClick={triggerGallery}
-                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all w-24"
+                                            className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all w-24 shadow-lg"
                                         >
                                             <ImageIcon className="w-6 h-6 text-purple-400" />
                                             <span className="text-[10px] font-bold text-slate-300">Gallery</span>
@@ -351,14 +348,16 @@ const ReportForm = ({ onRefresh, user }) => {
                                      </div>
                                 </div>
 
-                                {/* 2. DESKTOP VIEW: SINGLE CLICK AREA */}
+                                {/* 2. DESKTOP VIEW (>= 768px): STANDARD CLICKABLE AREA */}
                                 <div 
                                     className="hidden md:flex flex-col items-center cursor-pointer w-full h-full justify-center hover:bg-slate-800/30 transition-colors rounded-xl"
-                                    onClick={triggerGallery} 
+                                    onClick={triggerGallery} // Desktop defaults to file picker
                                 >
                                      <UploadCloud className="w-10 h-10 text-slate-400 mb-3 group-hover:text-blue-400 transition-colors" />
                                      <p className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">{t('citizen.uploadPhoto') || "Click to Upload Photo"}</p>
+                                     <p className="text-[10px] text-slate-500 mt-1">Supports: JPG, PNG, WEBP</p>
                                 </div>
+
                             </div>
                         )}
                     </div>
