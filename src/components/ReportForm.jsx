@@ -1,5 +1,5 @@
 // src/components/ReportForm.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Disc } from 'lucide-react';
 import { getAiAdvice } from '../services/aiService';
@@ -15,20 +15,25 @@ import ConfirmationModal from './ConfirmationModal';
 
 const ReportForm = ({ onRefresh, user }) => {
   const { t } = useTranslation();
-  const [step, setStep] = useState(1); 
+  
+  // --- RESTORE STATE FROM LOCAL STORAGE (Fix for Mobile Refresh) ---
+  const savedData = JSON.parse(localStorage.getItem('civicReportDraft') || '{}');
+  const initialStep = savedData.category ? 2 : 1;
+
+  const [step, setStep] = useState(initialStep); 
   
   // Input Refs
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    category: '', 
-    title: '', 
-    description: '',
-    state: '',      
-    city: '',       
-    pincode: '',    
-    addressDetail: '' 
+    category: savedData.category || '', 
+    title: savedData.title || '', 
+    description: savedData.description || '',
+    state: savedData.state || '',      
+    city: savedData.city || '',       
+    pincode: savedData.pincode || '',    
+    addressDetail: savedData.addressDetail || '' 
   });
 
   const [image, setImage] = useState(null);
@@ -44,6 +49,11 @@ const ReportForm = ({ onRefresh, user }) => {
 
   const CLOUD_NAME = "dtdkkjk1p"; 
   const UPLOAD_PRESET = "ml_default"; 
+
+  // --- SAVE TO LOCAL STORAGE ON CHANGE ---
+  useEffect(() => {
+    localStorage.setItem('civicReportDraft', JSON.stringify(formData));
+  }, [formData]);
 
   const categories = [
     { id: 'Water Leakage', label: t('cat.Water Leakage') || "Water Leakage", icon: <Droplets className="w-10 h-10 text-white" />, bg: 'bg-gradient-to-br from-blue-600 to-blue-800', shadow: 'shadow-blue-500/30', border: 'border-blue-500/30' },
@@ -81,7 +91,8 @@ const ReportForm = ({ onRefresh, user }) => {
     }
   };
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = (e) => {
+    if(e) e.preventDefault();
     setImage(null);
     setPreview(null);
     setAiAdvice(null);
@@ -181,6 +192,8 @@ const ReportForm = ({ onRefresh, user }) => {
         votes: 0
       });
 
+      // Clear Draft & Reset
+      localStorage.removeItem('civicReportDraft');
       setStep(1);
       setFormData({ category: '', title: '', description: '', state: '', city: '', pincode: '', addressDetail: '' });
       setImage(null);
@@ -324,19 +337,19 @@ const ReportForm = ({ onRefresh, user }) => {
                                 <div className="flex flex-col items-center md:hidden w-full">
                                      <p className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">{t('citizen.uploadPhoto') || "Upload Evidence"}</p>
                                      <div className="flex gap-4 w-full justify-center">
-                                        {/* Camera Button */}
+                                        {/* Camera Button (Prevent Default added) */}
                                         <button 
                                             type="button"
-                                            onClick={() => cameraInputRef.current.click()}
+                                            onClick={(e) => { e.preventDefault(); cameraInputRef.current.click(); }}
                                             className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all"
                                         >
                                             <Camera className="w-6 h-6 text-blue-400" />
                                             <span className="text-[10px] font-bold text-slate-300">Camera</span>
                                         </button>
-                                        {/* Gallery Button */}
+                                        {/* Gallery Button (Prevent Default added) */}
                                         <button 
                                             type="button"
-                                            onClick={() => galleryInputRef.current.click()}
+                                            onClick={(e) => { e.preventDefault(); galleryInputRef.current.click(); }}
                                             className="flex flex-col items-center gap-1 bg-slate-800 p-3 rounded-xl border border-slate-600 active:scale-95 transition-all"
                                         >
                                             <ImageIcon className="w-6 h-6 text-purple-400" />
@@ -348,7 +361,7 @@ const ReportForm = ({ onRefresh, user }) => {
                                 {/* --- DESKTOP VIEW (>= 768px): STANDARD CLICKABLE AREA --- */}
                                 <div 
                                     className="hidden md:flex flex-col items-center cursor-pointer w-full h-full justify-center"
-                                    onClick={() => galleryInputRef.current.click()} // Desktop -> Standard File Picker
+                                    onClick={() => galleryInputRef.current.click()} 
                                 >
                                      <UploadCloud className="w-10 h-10 text-slate-400 mb-3 group-hover:text-blue-400 transition-colors" />
                                      <p className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">{t('citizen.uploadPhoto') || "Click to Upload Photo"}</p>
