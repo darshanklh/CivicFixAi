@@ -306,7 +306,7 @@ const ReportForm = ({ onRefresh, user }) => {
                         type="file" 
                         className="hidden" 
                         accept="image/*" 
-                        capture="environment" // Forces rear camera on mobile
+                        // Removed capture="environment" to allow Gallery option
                         onChange={handleImageChange} 
                     />
                 </label>
