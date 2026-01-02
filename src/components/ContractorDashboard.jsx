@@ -6,8 +6,10 @@ import {
   Briefcase, CheckCircle2, MapPin, Clock, ArrowRight, 
   PackageCheck, Timer, HardHat, Zap, Droplets, 
   Trash2, Shovel, Wrench, Star, History, IndianRupee, Box, 
-  Activity, Target, Crosshair, Wallet, TrendingUp, Languages, ChevronDown, User
+  Activity, Target, Crosshair, Wallet, TrendingUp, Languages, ChevronDown, User, 
+  Coins 
 } from 'lucide-react';
+import ConfirmationModal from './ConfirmationModal'; // Import ConfirmationModal
 
 // --- 1. PRO DYNAMIC HUD BACKGROUND ---
 const ProfessionalBackground = () => {
@@ -100,6 +102,7 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('available');
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   // -- Language Switcher --
   const changeLanguage = (lng) => {
@@ -141,16 +144,43 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
       return i.status === 'Resolved' && i.contractorName === user.displayName;
   });
 
-  // -- Revenue Calculation --
-  const totalEarnings = historyJobs.reduce((acc, job) => acc + (parseFloat(job.price) || 0), 0);
+ // -- UPDATED REVENUE CALCULATION: Price + Tip --
+const totalEarnings = historyJobs.reduce((acc, job) => {
+    const budget = parseFloat(job.price) || 0;
+    const tip = parseFloat(job.tipAmount) || 0;
+    return acc + budget + tip;
+}, 0);
 
   // -- Accept Job Function (The "Locking" Mechanism) --
   const handleAcceptJob = (issueId) => {
-      onUpdateStatus(issueId, 'In Progress', {
-          contractorName: user.displayName, // Stamp my name
-          contractorRating: user.rating,    // Stamp my rating
-          contractorId: user.roleType       // Stamp my trade type
+      setConfirmModal({
+        isOpen: true,
+        type: 'info',
+        title: 'Accept Job Assignment',
+        message: 'Are you sure you want to accept this job? Once accepted, it will be moved to your Active queue.',
+        confirmText: 'Accept Job',
+        onConfirm: () => {
+            onUpdateStatus(issueId, 'In Progress', {
+                contractorName: user.displayName, // Stamp my name
+                contractorRating: user.rating,    // Stamp my rating
+                contractorId: user.roleType       // Stamp my trade type
+            });
+            setActiveTab('active');
+        }
       });
+  };
+
+  const requestResolveJob = (issueId) => {
+    setConfirmModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Mark as Resolved',
+        message: 'Have you completed the work? This will notify the admin and the citizen to review your work.',
+        confirmText: 'Complete Job',
+        onConfirm: () => {
+            onUpdateStatus(issueId, 'Resolved');
+        }
+    });
   };
 
   const getRoleIcon = (role) => {
@@ -166,6 +196,11 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
       
       {/* Background */}
       <ProfessionalBackground />
+
+      <ConfirmationModal 
+        {...confirmModal} 
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
+      />
 
       {/* HEADER */}
       <div className="relative z-50 bg-slate-950/70 backdrop-blur-xl border-b border-slate-800 p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center sticky top-0 shadow-2xl gap-4">
@@ -264,7 +299,7 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
                   <EmptyState icon={<Timer className="w-12 h-12 text-slate-600"/>} title="Standby Mode" desc="Accept a new order to initialize workflow." />
                 ) : (
                   myActiveJobs.map(issue => (
-                    <JobCard key={issue.id} issue={issue} type="active" onAction={() => onUpdateStatus(issue.id, 'Resolved')} btnText={t('contractor.resolve') || "MARK RESOLVED"}/>
+                    <JobCard key={issue.id} issue={issue} type="active" onAction={() => requestResolveJob(issue.id)} btnText={t('contractor.resolve') || "MARK RESOLVED"}/>
                   ))
                 )}
               </motion.div>
@@ -342,13 +377,24 @@ const JobCard = ({ issue, type, onAction, btnText }) => {
                     <h3 className="text-xl font-bold text-slate-100 line-clamp-1 group-hover:text-blue-400 transition-colors tracking-tight">{issue.title}</h3>
                     <Badge type={type} />
                 </div>
+                
+                {/* Price & Tip Section - FIXED & SAFER */}
                 {issue.price && (
-                      <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-3">
+                        {/* Budget Badge */}
                         <div className={`px-2 py-0.5 rounded border text-xs font-mono font-bold flex items-center gap-1 ${type === 'history' ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
-                            <IndianRupee className="w-3 h-3" /> {type === 'history' ? `Settled: ${issue.price}` : `${issue.price} Budget`}
+                            <IndianRupee className="w-3 h-3" /> {issue.price} Budget
                         </div>
-                      </div>
+
+                        {/* NEW: Tip Badge (Only show if tip exists and > 0) */}
+                        {(Number(issue.tipAmount) || 0) > 0 && (
+                            <div className="px-2 py-0.5 rounded border text-xs font-mono font-bold flex items-center gap-1 bg-yellow-500/10 border-yellow-500/20 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.2)] animate-pulse">
+                                <Coins className="w-3 h-3" /> +₹{issue.tipAmount} Tip
+                            </div>
+                        )}
+                    </div>
                 )}
+
                 <p className="text-slate-400 text-sm mb-4 line-clamp-2 leading-relaxed border-l-2 border-slate-700 pl-3">{issue.description}</p>
                 {type === 'history' && issue.isReviewed && (
                       <div className="mt-auto bg-slate-950/50 border border-slate-800 rounded-lg p-3 flex gap-3 mb-2">
