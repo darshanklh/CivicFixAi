@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'; 
 import { db } from '../firebase'; 
+import ConfirmationModal from './ConfirmationModal'; // <--- NEW IMPORT
 
 // --- 1. BACKGROUND ANIMATION ---
 const LiveRoadBackground = () => {
@@ -174,7 +175,6 @@ const ContractorProfileModal = ({ name, issues, onClose }) => {
                             <p className="text-blue-400 text-sm font-bold uppercase tracking-wider mb-2">Verified Contractor</p>
                             <div className="flex gap-2">
                                 <span className="bg-slate-800 text-slate-300 text-xs px-2 py-1 rounded border border-slate-700 flex items-center gap-1">
-                                    {/* FIX: Use 'city' instead of 'contractorCity' */}
                                     <MapPin className="w-3 h-3"/> {history[0]?.city || "Unknown Location"}
                                 </span>
                             </div>
@@ -562,6 +562,10 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
   // --- NEW: AUTO-PLAY NOTIFICATIONS LOGIC ---
   const prevIssueCount = React.useRef(issues.length);
 
+  // --- NEW: MODAL STATE ---
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  
   useEffect(() => {
       // Check if new issues arrived (length increased)
       if (issues.length > prevIssueCount.current) {
@@ -613,11 +617,22 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
     { id: 'All Rounder', icon: <Wrench className="w-4 h-4" />, color: 'bg-purple-600' },
   ];
 
+  // --- MODIFIED: Handle Forward with Confirmation ---
   const handleForward = (issueId, deptId) => {
     if (!price) return alert("Please assign a price for this job.");
-    onUpdateStatus(issueId, 'Accepted', { assignedTo: deptId, price: price });
-    setAssigningId(null);
-    setPrice('');
+    
+    setConfirmModal({
+        isOpen: true,
+        type: 'info',
+        title: 'Confirm Dispatch',
+        message: `Are you sure you want to dispatch ${deptId} for a budget of ₹${price}?`,
+        confirmText: 'Dispatch Unit',
+        onConfirm: () => {
+            onUpdateStatus(issueId, 'Accepted', { assignedTo: deptId, price: price });
+            setAssigningId(null);
+            setPrice('');
+        }
+    });
   };
 
   const toggleSidebar = (e) => {
@@ -630,6 +645,12 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
       
       {/* 1. BACKGROUND (Z-0) */}
       <LiveRoadBackground />
+
+      {/* --- ADD MODAL HERE --- */}
+      <ConfirmationModal 
+        {...confirmModal} 
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
+      />
 
       {/* 2. BACKDROP OVERLAY (Mobile Only - Z-40) */}
       <AnimatePresence>
@@ -801,7 +822,7 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
                                                         <div className="flex flex-wrap gap-2">
                                                             {departments.map((dept) => (
                                                                 <button key={dept.id} onClick={() => handleForward(issue.id, dept.id)} className={`${dept.color} hover:opacity-90 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-transform active:scale-95`}>
-                                                                        {dept.icon} {dept.id}
+                                                                    {dept.icon} {dept.id}
                                                                 </button>
                                                             ))}
                                                             <button onClick={() => {setAssigningId(null); setPrice('');}} className="text-slate-400 hover:text-white px-3 text-xs border border-slate-600 rounded-lg">Cancel</button>
