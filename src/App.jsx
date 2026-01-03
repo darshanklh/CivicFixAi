@@ -1,4 +1,5 @@
 // src// src/App.jsx
+// src/App.jsx
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next'; 
 import ReportForm from './components/ReportForm';
@@ -333,4 +334,4 @@ function App() {
                                         </div>
                                         <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-green-500/30 transition-all">
                                             <div><p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Resolved</p><p className="text-4xl font-black text-white">{myResolvedCount}</p></div>
-                                            <div className="p-4 bg-gradient-to-br/App.jsx
+                                            <div className="p-4 bg-gradient-to-br
