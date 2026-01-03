@@ -1,8 +1,7 @@
-// src/App.jsx
+// src// src/App.jsx
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next'; 
 import ReportForm from './components/ReportForm';
-// REMOVED: import IssueMap from './components/IssueMap'; 
 import IssueCard from './components/IssueCard';
 import LandingPage from './components/LandingPage';
 import AdminDashboard from './components/AdminDashboard';
@@ -18,7 +17,7 @@ import { collection, query, orderBy, onSnapshot, deleteDoc, updateDoc, doc } fro
 import { 
   LayoutDashboard, LogOut, TrendingUp, Menu, 
   BarChart3, Home, BrainCircuit, FileText, ArrowLeft, 
-  CheckCircle2, Activity, User, Settings, Languages
+  CheckCircle2, Activity, User, Settings, Languages, PlusCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -73,12 +72,12 @@ function App() {
       }
     });
     return () => unsubscribeAuth();
-  }, [currentUser]); // Dependency logic preserved
+  }, [currentUser]); 
 
   const handleRoleSelect = (selectedRole, userData) => {
     setRole(selectedRole);
     setCurrentUser(userData);
-    localStorage.setItem('civic_role', selectedRole); // --- FIX: Save Role ---
+    localStorage.setItem('civic_role', selectedRole); 
   };
 
   const handleNavigation = (newView) => {
@@ -131,7 +130,7 @@ function App() {
     setRole(null);
     setCurrentUser(null);
     setCachedUser(null);
-    localStorage.removeItem('civic_role'); // --- FIX: Clear Saved Role ---
+    localStorage.removeItem('civic_role'); 
   };
 
   const myReports = currentUser 
@@ -145,17 +144,13 @@ function App() {
   if (!role) return (
     <>
       <LandingPage onSelectRole={handleRoleSelect} cachedUser={cachedUser} />
-      {/* Show Chatbot on Landing Page */}
       <AiChatbot /> 
     </>
   );
 
   return (
     <div className="h-screen h-[100dvh] flex flex-col overflow-hidden relative font-sans text-slate-100">
-      {/* Background for Citizen Only */}
       {role === 'citizen' && <MidnightBackground />}
-
-      {/* --- INTEGRATED AI CHATBOT --- */}
       {role === 'citizen' && <AiChatbot />}
       
       {/* Modals */}
@@ -176,7 +171,6 @@ function App() {
             
             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavigation('dashboard')}>
                 <div className={`p-2 rounded-xl shadow-lg shadow-blue-500/20 bg-gradient-to-br from-blue-600 to-violet-600 group-hover:scale-105 transition-transform`}>
-                  {/* Replaced MapIcon with LayoutDashboard or similar icon since map is gone, keeping dashboard icon logic */}
                   <LayoutDashboard className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-xl font-bold text-white tracking-tight hidden sm:inline">
@@ -210,8 +204,6 @@ function App() {
                     )}
                 </div>
             )}
-
-            {/* REMOVED MAP BUTTON GROUP HERE */}
             
             <button onClick={handleLogout} className="p-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all">
               <LogOut className="w-5 h-5" />
@@ -236,15 +228,14 @@ function App() {
         )}
 
         {role === 'citizen' && (
-            // REMOVED MAP VIEW LOGIC. Only Dashboard view remains.
             <div className="flex w-full h-full relative">
                 <AnimatePresence initial={false}>
                     {isSidebarOpen && (
                         <>
-                            {/* Overlay: Click to close sidebar */}
+                            {/* Overlay */}
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/60 z-20 backdrop-blur-sm" />
                             
-                            {/* SIDEBAR (Mobile Left Sidebar) */}
+                            {/* SIDEBAR */}
                             <motion.aside 
                                 initial={{ width: 0, opacity: 0 }} 
                                 animate={{ width: 280, opacity: 1 }} 
@@ -252,8 +243,6 @@ function App() {
                                 className="bg-slate-900/90 backdrop-blur-2xl border-r border-slate-700 h-full overflow-hidden flex-shrink-0 z-30 relative shadow-2xl flex flex-col"
                             >
                                 <div className="flex-1 flex flex-col w-[280px] overflow-y-auto custom-scrollbar">
-                                    
-                                    {/* 1. EXISTING NAVIGATION BUTTONS */}
                                     <div className="p-4 space-y-2 mt-4 flex-shrink-0">
                                         <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Navigation</p>
                                         
@@ -283,31 +272,8 @@ function App() {
                                             </div>
                                         </button>
                                     </div>
-
-                                    {/* 2. COMMUNITY REPORTS (Mobile Only) */}
-                                    <div className="p-4 border-t border-slate-800/50 mt-2 xl:hidden">
-                                        <div className="flex items-center gap-2 px-4 mb-4 text-slate-500">
-                                            <TrendingUp className="w-4 h-4" />
-                                            <p className="text-xs font-bold uppercase tracking-widest">Community Feed</p>
-                                        </div>
-                                        
-                                        <div className="space-y-3 pb-20">
-                                            {issues.map((issue) => (
-                                                <IssueCard 
-                                                    key={issue.id} 
-                                                    issue={issue} 
-                                                    onClick={() => {
-                                                        setSelectedIssue(issue);
-                                                        setIsSidebarOpen(false); 
-                                                    }} 
-                                                    compact={true} 
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
                                 </div>
 
-                                {/* PROFILE SECTION AT BOTTOM LEFT */}
                                 <div className="p-4 border-t border-slate-800 bg-slate-950/30 z-40 relative">
                                     <button 
                                         onClick={() => {
@@ -341,7 +307,9 @@ function App() {
 
                 <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12 scroll-smooth relative z-10">
                     <div className="max-w-5xl mx-auto">
-                        {view === 'my-reports' ? (
+                        
+                        {/* --- VIEW 1: MY REPORTS --- */}
+                        {view === 'my-reports' && (
                             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div className="flex items-center gap-4">
                                     <button onClick={() => handleNavigation('dashboard')} className="p-3 bg-slate-800/50 hover:bg-slate-700 rounded-full transition-all shadow-sm border border-slate-700 group backdrop-blur-sm">
@@ -353,57 +321,16 @@ function App() {
                                     </div>
                                     </div>
 
-                                    {/* DARK STATS CARDS */}
+                                    {/* Stats Cards */}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                    <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-blue-500/30 transition-all">
-                                        <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Reported</p><p className="text-4xl font-black text-white">{myTotalCount}</p></div>
-                                        <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-900 rounded-2xl text-white shadow-lg shadow-blue-900/20"><FileText className="w-6 h-6" /></div>
-                                    </div>
-                                    <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-orange-500/30 transition-all">
-                                        <div><p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2">In Progress</p><p className="text-4xl font-black text-white">{myInProgressCount}</p></div>
-                                        <div className="p-4 bg-gradient-to-br from-orange-600 to-amber-900 rounded-2xl text-white shadow-lg shadow-orange-900/20"><Activity className="w-6 h-6" /></div>
-                                    </div>
-                                    <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-green-500/30 transition-all">
-                                        <div><p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Resolved</p><p className="text-4xl font-black text-white">{myResolvedCount}</p></div>
-                                        <div className="p-4 bg-gradient-to-br from-green-600 to-emerald-900 rounded-2xl text-white shadow-lg shadow-green-900/20"><CheckCircle2 className="w-6 h-6" /></div>
-                                    </div>
-                                    </div>
-
-                                    {myReports.length === 0 ? (
-                                    <div className="text-center py-20 bg-slate-900/40 border-2 border-dashed border-slate-700/50 rounded-3xl backdrop-blur-md"><p className="text-slate-500 font-medium">You haven't reported any issues yet.</p></div>
-                                    ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        {myReports.map(issue => <IssueCard key={issue.id} issue={issue} onClick={() => setSelectedIssue(issue)} onSubmitReview={handleSubmitReview} />)}
-                                    </div>
-                                    )}
-                            </div>
-                        ) : (
-                            <ReportForm user={currentUser} onRefresh={() => handleNavigation('dashboard')} />
-                        )}
-                    </div>
-                </main>
-                
-                {/* --- FIX: RIGHT SIDEBAR SCROLLABLE --- */}
-                {/* Added overflow-hidden to parent to force constraint, ensuring inner div scrolls */}
-                <aside className="hidden xl:flex w-96 bg-slate-900/60 backdrop-blur-2xl border-l border-slate-700/50 h-full flex-col shadow-2xl z-20 flex-shrink-0 overflow-hidden">
-                    <div className="p-6 border-b border-slate-700/50 bg-slate-900/40 flex-shrink-0">
-                        <h2 className="font-extrabold flex items-center gap-3 text-white">
-                            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20"><TrendingUp className="w-5 h-5"/></div> 
-                            Community Reports
-                        </h2>
-                    </div>
-                    {/* flex-1 + overflow-y-auto + min-h-0 ensures this div takes available space and scrolls internally */}
-                    <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4 scroll-smooth custom-scrollbar">
-                        {issues.map((issue) => (
-                            <IssueCard key={issue.id} issue={issue} onClick={() => setSelectedIssue(issue)} compact={true} />
-                        ))}
-                    </div>
-                </aside>
-            </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default App;
+                                        <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-blue-500/30 transition-all">
+                                            <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Reported</p><p className="text-4xl font-black text-white">{myTotalCount}</p></div>
+                                            <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-900 rounded-2xl text-white shadow-lg shadow-blue-900/20"><FileText className="w-6 h-6" /></div>
+                                        </div>
+                                        <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-orange-500/30 transition-all">
+                                            <div><p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2">In Progress</p><p className="text-4xl font-black text-white">{myInProgressCount}</p></div>
+                                            <div className="p-4 bg-gradient-to-br from-orange-600 to-amber-900 rounded-2xl text-white shadow-lg shadow-orange-900/20"><Activity className="w-6 h-6" /></div>
+                                        </div>
+                                        <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-green-500/30 transition-all">
+                                            <div><p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Resolved</p><p className="text-4xl font-black text-white">{myResolvedCount}</p></div>
+                                            <div className="p-4 bg-gradient-to-br/App.jsx
