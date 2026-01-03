@@ -210,7 +210,7 @@ const LandingPage = ({ onSelectRole, cachedUser }) => {
             ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 w-full">
                 <AnimatePresence mode="wait">
-                    {/* (Contractor Steps 0, 1, 2, 3, 4 - Same logic as previous code) */}
+                    {/* (Contractor Steps 0, 1, 2, 3, 4) */}
                     {contractorStep === 0 && (
                         <motion.div key="step0" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }}>
                             <p className="text-xs text-orange-400 font-bold mb-2 uppercase">1. Master Access Code</p>
