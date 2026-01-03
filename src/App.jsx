@@ -1,4 +1,3 @@
-// src// src/App.jsx
 // src/App.jsx
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next'; 
@@ -18,7 +17,8 @@ import { collection, query, orderBy, onSnapshot, deleteDoc, updateDoc, doc } fro
 import { 
   LayoutDashboard, LogOut, TrendingUp, Menu, 
   BarChart3, Home, BrainCircuit, FileText, ArrowLeft, 
-  CheckCircle2, Activity, User, Settings, Languages, PlusCircle
+  CheckCircle2, Activity, User, Settings, Languages,
+  PlusCircle, MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -43,7 +43,7 @@ function App() {
   const { t, i18n } = useTranslation(); 
   const [role, setRole] = useState(null); 
   const [issues, setIssues] = useState([]);
-  const [view, setView] = useState('dashboard'); 
+  const [view, setView] = useState('dashboard'); // START AT DASHBOARD (HOME)
   const [currentUser, setCurrentUser] = useState(null);
   
   // State for Modals
@@ -58,12 +58,9 @@ function App() {
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   
   useEffect(() => {
-    // --- FIX: Restore Role on Reload ---
-    const savedRole = localStorage.getItem('civic_role');
-    if (savedRole) {
-      setRole(savedRole);
-    }
-
+    // --- WORKFLOW CHANGE: REMOVED AUTO ROLE RESTORE TO FORCE LANDING PAGE ---
+    // This ensures every refresh starts at Landing Page
+    
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCachedUser(user);
@@ -78,7 +75,7 @@ function App() {
   const handleRoleSelect = (selectedRole, userData) => {
     setRole(selectedRole);
     setCurrentUser(userData);
-    localStorage.setItem('civic_role', selectedRole); 
+    setView('dashboard'); // Ensures new login goes to Dashboard
   };
 
   const handleNavigation = (newView) => {
@@ -137,10 +134,8 @@ function App() {
   const myReports = currentUser 
     ? issues.filter(issue => issue.userId === currentUser.uid || issue.userEmail === currentUser.email)
     : [];
-
-  const myTotalCount = myReports.length;
-  const myInProgressCount = myReports.filter(i => i.status === 'In Progress').length;
-  const myResolvedCount = myReports.filter(i => i.status === 'Resolved').length;
+  const globalResolved = issues.filter(i => i.status === 'Resolved').length;
+  const globalInProgress = issues.filter(i => i.status === 'In Progress').length;
 
   if (!role) return (
     <>
@@ -154,13 +149,11 @@ function App() {
       {role === 'citizen' && <MidnightBackground />}
       {role === 'citizen' && <AiChatbot />}
       
-      {/* Modals */}
       {selectedIssue && <IssueDetailModal issue={selectedIssue} onClose={() => setSelectedIssue(null)} />}
       {showTrackerModal && <LiveTrackerModal issues={issues} onClose={() => setShowTrackerModal(false)} />}
       {showForecast && <ForecastModal onClose={() => setShowForecast(false)} />}
       {showProfileModal && <UserProfileModal user={currentUser} onClose={() => setShowProfileModal(false)} />}
 
-      {/* NAVBAR */}
       <nav className="h-16 flex-none z-50 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md sticky top-0">
         <div className="max-w-[1920px] mx-auto px-6 h-full flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -185,8 +178,6 @@ function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            
-            {/* --- CITIZEN LANGUAGE SWITCHER --- */}
             {role === 'citizen' && (
                 <div className="relative">
                     <button 
@@ -205,7 +196,7 @@ function App() {
                     )}
                 </div>
             )}
-            
+
             <button onClick={handleLogout} className="p-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all">
               <LogOut className="w-5 h-5" />
             </button>
@@ -213,7 +204,6 @@ function App() {
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
         
         {role === 'admin' && (
@@ -233,10 +223,8 @@ function App() {
                 <AnimatePresence initial={false}>
                     {isSidebarOpen && (
                         <>
-                            {/* Overlay */}
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/60 z-20 backdrop-blur-sm" />
                             
-                            {/* SIDEBAR */}
                             <motion.aside 
                                 initial={{ width: 0, opacity: 0 }} 
                                 animate={{ width: 280, opacity: 1 }} 
@@ -252,7 +240,15 @@ function App() {
                                             className={`flex items-center gap-3 p-3 mx-2 rounded-xl cursor-pointer transition-all ${view === 'dashboard' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20 shadow-sm font-bold' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white border border-transparent font-medium'}`}
                                         >
                                             <Home className="w-5 h-5" /> 
-                                            <span>{t('citizen.submit') || "Home"}</span>
+                                            <span>Home</span>
+                                        </div>
+
+                                        <div 
+                                            onClick={() => handleNavigation('report')}
+                                            className={`flex items-center gap-3 p-3 mx-2 rounded-xl cursor-pointer transition-all ${view === 'report' ? 'bg-orange-600/10 text-orange-400 border border-orange-500/20 shadow-sm font-bold' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white border border-transparent font-medium'}`}
+                                        >
+                                            <PlusCircle className="w-5 h-5" /> 
+                                            <span>Report Issue</span>
                                         </div>
                                         
                                         <button onClick={() => handleOpenModal(setShowTrackerModal)} className="w-full flex items-center justify-between p-3 px-5 hover:bg-slate-800/50 text-slate-300 font-medium transition-colors rounded-xl border border-transparent">
@@ -273,16 +269,27 @@ function App() {
                                             </div>
                                         </button>
                                     </div>
+
+                                    <div className="p-4 border-t border-slate-800/50 mt-2 xl:hidden">
+                                        <div className="flex items-center gap-2 px-4 mb-4 text-slate-500">
+                                            <TrendingUp className="w-4 h-4" />
+                                            <p className="text-xs font-bold uppercase tracking-widest">Community Feed</p>
+                                        </div>
+                                        <div className="space-y-3 pb-20">
+                                            {issues.map((issue) => (
+                                                <IssueCard 
+                                                    key={issue.id} 
+                                                    issue={issue} 
+                                                    onClick={() => { setSelectedIssue(issue); setIsSidebarOpen(false); }} 
+                                                    compact={true} 
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="p-4 border-t border-slate-800 bg-slate-950/30 z-40 relative">
-                                    <button 
-                                        onClick={() => {
-                                            setShowProfileModal(true);
-                                            setIsSidebarOpen(false);
-                                        }}
-                                        className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-slate-800 transition-all group"
-                                    >
+                                    <button onClick={() => { setShowProfileModal(true); setIsSidebarOpen(false); }} className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-slate-800 transition-all group">
                                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-violet-500 p-[2px] shadow-lg shadow-blue-500/20">
                                             <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
                                                 {currentUser?.photoURL ? (
@@ -309,7 +316,47 @@ function App() {
                 <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12 scroll-smooth relative z-10">
                     <div className="max-w-5xl mx-auto">
                         
-                        {/* --- VIEW 1: MY REPORTS --- */}
+                        {view === 'dashboard' && (
+                            <div className="animate-in fade-in zoom-in duration-500 space-y-10">
+                                <div className="text-center space-y-4 py-10">
+                                    <h1 className="text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-white to-blue-200 tracking-tight">
+                                        Welcome, {currentUser?.displayName?.split(' ')[0] || 'Citizen'}
+                                    </h1>
+                                    <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+                                        Empowering our community to build a safer, cleaner, and smarter city. 
+                                        Report issues instantly and track their resolution in real-time.
+                                    </p>
+                                    <div className="pt-6 flex justify-center gap-4">
+                                        <button onClick={() => handleNavigation('report')} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/25 transition-all active:scale-95 flex items-center gap-2">
+                                            <PlusCircle className="w-5 h-5" /> Report Issue
+                                        </button>
+                                        <button onClick={() => handleNavigation('my-reports')} className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl font-bold border border-slate-700 transition-all active:scale-95 flex items-center gap-2">
+                                            <User className="w-5 h-5" /> My Activity
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                    <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
+                                        <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Reports</p><p className="text-4xl font-black text-white">{issues.length}</p></div>
+                                        <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-400 border border-blue-500/20"><FileText className="w-6 h-6" /></div>
+                                    </div>
+                                    <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
+                                        <div><p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2">Active Work</p><p className="text-4xl font-black text-white">{globalInProgress}</p></div>
+                                        <div className="p-4 bg-orange-500/10 rounded-2xl text-orange-400 border border-orange-500/20"><Activity className="w-6 h-6" /></div>
+                                    </div>
+                                    <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
+                                        <div><p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Fixed</p><p className="text-4xl font-black text-white">{globalResolved}</p></div>
+                                        <div className="p-4 bg-green-500/10 rounded-2xl text-green-400 border border-green-500/20"><CheckCircle2 className="w-6 h-6" /></div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'report' && (
+                            <ReportForm user={currentUser} onRefresh={() => handleNavigation('my-reports')} />
+                        )}
+
                         {view === 'my-reports' && (
                             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div className="flex items-center gap-4">
@@ -322,16 +369,39 @@ function App() {
                                     </div>
                                     </div>
 
-                                    {/* Stats Cards */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                        <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-blue-500/30 transition-all">
-                                            <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Reported</p><p className="text-4xl font-black text-white">{myTotalCount}</p></div>
-                                            <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-900 rounded-2xl text-white shadow-lg shadow-blue-900/20"><FileText className="w-6 h-6" /></div>
-                                        </div>
-                                        <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-orange-500/30 transition-all">
-                                            <div><p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2">In Progress</p><p className="text-4xl font-black text-white">{myInProgressCount}</p></div>
-                                            <div className="p-4 bg-gradient-to-br from-orange-600 to-amber-900 rounded-2xl text-white shadow-lg shadow-orange-900/20"><Activity className="w-6 h-6" /></div>
-                                        </div>
-                                        <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-green-500/30 transition-all">
-                                            <div><p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Resolved</p><p className="text-4xl font-black text-white">{myResolvedCount}</p></div>
-                                            <div className="p-4 bg-gradient-to-br
+                                    {myReports.length === 0 ? (
+                                    <div className="text-center py-20 bg-slate-900/40 border-2 border-dashed border-slate-700/50 rounded-3xl backdrop-blur-md">
+                                        <p className="text-slate-500 font-medium mb-4">You haven't reported any issues yet.</p>
+                                        <button onClick={() => handleNavigation('report')} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold">Report Now</button>
+                                    </div>
+                                    ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {myReports.map(issue => <IssueCard key={issue.id} issue={issue} onClick={() => setSelectedIssue(issue)} onSubmitReview={handleSubmitReview} />)}
+                                    </div>
+                                    )}
+                            </div>
+                        )}
+                    </div>
+                </main>
+                
+                <aside className="hidden xl:flex w-96 bg-slate-900/60 backdrop-blur-2xl border-l border-slate-700/50 h-full flex-col shadow-2xl z-20 flex-shrink-0 overflow-hidden">
+                    <div className="p-6 border-b border-slate-700/50 bg-slate-900/40 flex-shrink-0">
+                        <h2 className="font-extrabold flex items-center gap-3 text-white">
+                            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20"><TrendingUp className="w-5 h-5"/></div> 
+                            Community Reports
+                        </h2>
+                    </div>
+                    <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4 scroll-smooth custom-scrollbar">
+                        {issues.map((issue) => (
+                            <IssueCard key={issue.id} issue={issue} onClick={() => setSelectedIssue(issue)} compact={true} />
+                        ))}
+                    </div>
+                </aside>
+            </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default App;
