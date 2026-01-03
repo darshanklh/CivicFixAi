@@ -367,7 +367,7 @@ const LandingPage = ({ onSelectRole, cachedUser }) => {
                 </div>
                 
                 <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                    Omshree <span className="text-slate-600">&</span> Darshan
+                    Darshan <span className="text-slate-600">&</span> Omshree
                 </h3>
                 <p className="text-slate-500 text-sm">
                     Built with React, Firebase & Framer Motion
