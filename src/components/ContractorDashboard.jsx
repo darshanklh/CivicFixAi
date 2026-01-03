@@ -7,9 +7,10 @@ import {
   PackageCheck, Timer, HardHat, Zap, Droplets, 
   Trash2, Shovel, Wrench, Star, History, IndianRupee, Box, 
   Activity, Target, Crosshair, Wallet, TrendingUp, Languages, ChevronDown, User, 
-  Coins 
+  Coins, MessageCircle 
 } from 'lucide-react';
-import ConfirmationModal from './ConfirmationModal'; // Import ConfirmationModal
+import ConfirmationModal from './ConfirmationModal'; 
+import ChatModal from './ChatModal'; // <--- NEW IMPORT
 
 // --- 1. PRO DYNAMIC HUD BACKGROUND ---
 const ProfessionalBackground = () => {
@@ -103,6 +104,9 @@ const ContractorDashboard = ({ issues, onUpdateStatus, user }) => {
   const [activeTab, setActiveTab] = useState('available');
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  
+  // --- NEW: CHAT STATE ---
+  const [chatIssue, setChatIssue] = useState(null);
 
   // -- Language Switcher --
   const changeLanguage = (lng) => {
@@ -202,6 +206,18 @@ const totalEarnings = historyJobs.reduce((acc, job) => {
         onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
       />
 
+      {/* --- ADD CHAT MODAL HERE --- */}
+      <AnimatePresence>
+        {chatIssue && (
+            <ChatModal 
+                issueId={chatIssue.id} 
+                issueTitle={chatIssue.title} 
+                currentUserRole="contractor" 
+                onClose={() => setChatIssue(null)} 
+            />
+        )}
+      </AnimatePresence>
+
       {/* HEADER */}
       <div className="relative z-50 bg-slate-950/70 backdrop-blur-xl border-b border-slate-800 p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center sticky top-0 shadow-2xl gap-4">
         <div>
@@ -299,7 +315,15 @@ const totalEarnings = historyJobs.reduce((acc, job) => {
                   <EmptyState icon={<Timer className="w-12 h-12 text-slate-600"/>} title="Standby Mode" desc="Accept a new order to initialize workflow." />
                 ) : (
                   myActiveJobs.map(issue => (
-                    <JobCard key={issue.id} issue={issue} type="active" onAction={() => requestResolveJob(issue.id)} btnText={t('contractor.resolve') || "MARK RESOLVED"}/>
+                    <JobCard 
+                        key={issue.id} 
+                        issue={issue} 
+                        type="active" 
+                        onAction={() => requestResolveJob(issue.id)} 
+                        btnText={t('contractor.resolve') || "MARK RESOLVED"}
+                        // PASS CHAT HANDLER
+                        onChat={() => setChatIssue(issue)}
+                    />
                   ))
                 )}
               </motion.div>
@@ -355,7 +379,7 @@ const EmptyState = ({ icon, title, desc }) => (
 );
 
 // --- UPDATED JOB CARD (Full Address Visibility) ---
-const JobCard = ({ issue, type, onAction, btnText }) => {
+const JobCard = ({ issue, type, onAction, btnText, onChat }) => {
   return (
     <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`bg-slate-900/60 backdrop-blur-xl border rounded-2xl p-1 shadow-2xl overflow-hidden relative group transition-all duration-300 ${type === 'history' ? 'border-slate-800/50 opacity-80 hover:opacity-100' : 'border-slate-700/60 hover:border-slate-500 hover:shadow-blue-900/10'}`}>
         <div className="absolute top-0 left-0 w-full h-[2px] bg-blue-500/50 -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s] ease-in-out z-20"></div>
@@ -378,15 +402,11 @@ const JobCard = ({ issue, type, onAction, btnText }) => {
                     <Badge type={type} />
                 </div>
                 
-                {/* Price & Tip Section - FIXED & SAFER */}
                 {issue.price && (
                     <div className="flex items-center gap-2 mb-3">
-                        {/* Budget Badge */}
                         <div className={`px-2 py-0.5 rounded border text-xs font-mono font-bold flex items-center gap-1 ${type === 'history' ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
                             <IndianRupee className="w-3 h-3" /> {issue.price} Budget
                         </div>
-
-                        {/* NEW: Tip Badge (Only show if tip exists and > 0) */}
                         {(Number(issue.tipAmount) || 0) > 0 && (
                             <div className="px-2 py-0.5 rounded border text-xs font-mono font-bold flex items-center gap-1 bg-yellow-500/10 border-yellow-500/20 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.2)] animate-pulse">
                                 <Coins className="w-3 h-3" /> +₹{issue.tipAmount} Tip
@@ -407,7 +427,6 @@ const JobCard = ({ issue, type, onAction, btnText }) => {
                 )}
                 {(!issue.isReviewed || type !== 'history') && (
                     <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-slate-500 mt-auto pt-3 border-t border-slate-800/50">
-                        {/* --- UPDATED ADDRESS DISPLAY HERE --- */}
                         <span className="flex items-start gap-1.5 font-bold text-slate-400 max-w-full">
                             <MapPin className="w-3.5 h-3.5 text-red-500/80 mt-0.5 shrink-0" /> 
                             <span className="break-words">
@@ -423,6 +442,18 @@ const JobCard = ({ issue, type, onAction, btnText }) => {
         </div>
         {type !== 'history' && (
             <div className="border-t border-slate-800 bg-black/20 p-4 flex justify-end items-center gap-4">
+                
+                {/* --- CHAT BUTTON --- */}
+                {type === 'active' && onChat && (
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onChat(); }}
+                        className="p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 transition-all hover:text-white"
+                        title="Chat with Admin"
+                    >
+                        <MessageCircle className="w-4 h-4" />
+                    </button>
+                )}
+
                 <button onClick={(e) => { e.stopPropagation(); onAction(); }} className={`w-full md:w-auto px-6 py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg uppercase text-xs tracking-widest border border-white/5 ${type === 'available' ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/30' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30'}`}>
                     {type === 'available' ? ( <>{btnText} <ArrowRight className="w-4 h-4" /></> ) : ( <><CheckCircle2 className="w-4 h-4" /> {btnText}</> )}
                 </button>
@@ -433,12 +464,12 @@ const JobCard = ({ issue, type, onAction, btnText }) => {
 };
 
 const Badge = ({ type }) => {
-    let classes = "";
-    let text = "";
-    if (type === 'available') { classes = "bg-amber-500/10 text-amber-500 border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.1)]"; text = "PENDING"; }
-    else if (type === 'active') { classes = "bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.1)]"; text = "ACTIVE"; }
-    else { classes = "bg-slate-800 text-slate-400 border-slate-700"; text = "ARCHIVED"; }
-    return <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border tracking-widest ${classes}`}>{text}</span>;
+    let classes = "";
+    let text = "";
+    if (type === 'available') { classes = "bg-amber-500/10 text-amber-500 border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.1)]"; text = "PENDING"; }
+    else if (type === 'active') { classes = "bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.1)]"; text = "ACTIVE"; }
+    else { classes = "bg-slate-800 text-slate-400 border-slate-700"; text = "ARCHIVED"; }
+    return <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border tracking-widest ${classes}`}>{text}</span>;
 };
 
 export default ContractorDashboard;
