@@ -58,9 +58,6 @@ function App() {
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   
   useEffect(() => {
-    // --- WORKFLOW CHANGE: REMOVED AUTO ROLE RESTORE TO FORCE LANDING PAGE ---
-    // This ensures every refresh starts at Landing Page
-    
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCachedUser(user);
@@ -131,11 +128,15 @@ function App() {
     localStorage.removeItem('civic_role'); 
   };
 
+  // --- STATS CALCULATION (USER CENTRIC) ---
   const myReports = currentUser 
     ? issues.filter(issue => issue.userId === currentUser.uid || issue.userEmail === currentUser.email)
     : [];
-  const globalResolved = issues.filter(i => i.status === 'Resolved').length;
-  const globalInProgress = issues.filter(i => i.status === 'In Progress').length;
+  
+  // Calculate stats strictly from myReports
+  const myTotalCount = myReports.length;
+  const myInProgressCount = myReports.filter(i => i.status === 'In Progress').length;
+  const myResolvedCount = myReports.filter(i => i.status === 'Resolved').length;
 
   if (!role) return (
     <>
@@ -336,17 +337,18 @@ function App() {
                                     </div>
                                 </div>
 
+                                {/* --- USER CENTRIC STATS CARDS --- */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                     <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
-                                        <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Reports</p><p className="text-4xl font-black text-white">{issues.length}</p></div>
+                                        <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Reports</p><p className="text-4xl font-black text-white">{myTotalCount}</p></div>
                                         <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-400 border border-blue-500/20"><FileText className="w-6 h-6" /></div>
                                     </div>
                                     <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
-                                        <div><p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2">Active Work</p><p className="text-4xl font-black text-white">{globalInProgress}</p></div>
+                                        <div><p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2">Active Work</p><p className="text-4xl font-black text-white">{myInProgressCount}</p></div>
                                         <div className="p-4 bg-orange-500/10 rounded-2xl text-orange-400 border border-orange-500/20"><Activity className="w-6 h-6" /></div>
                                     </div>
                                     <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
-                                        <div><p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Fixed</p><p className="text-4xl font-black text-white">{globalResolved}</p></div>
+                                        <div><p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Fixed</p><p className="text-4xl font-black text-white">{myResolvedCount}</p></div>
                                         <div className="p-4 bg-green-500/10 rounded-2xl text-green-400 border border-green-500/20"><CheckCircle2 className="w-6 h-6" /></div>
                                     </div>
                                 </div>
