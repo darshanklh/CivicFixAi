@@ -5,11 +5,13 @@ import {
   CheckCircle2, Trash2, MapPin, HardHat, Truck, Cone, Siren, 
   ClipboardCheck, Zap, Droplets, Shovel, Wrench, Send, PlayCircle, IndianRupee,
   LayoutDashboard, BarChart3, Users, Settings, TrendingUp, Menu, X, ChevronLeft,
-  FileText, Calendar, Star, Shield, Cpu, Radio, Globe, AlertOctagon, ToggleLeft, ToggleRight, Save, User, ArrowRight, Download, Bell, Volume2, RefreshCw, Database
+  FileText, Calendar, Star, Shield, Cpu, Radio, Globe, AlertOctagon, ToggleLeft, ToggleRight, Save, User, ArrowRight, Download, Bell, Volume2, RefreshCw, Database,
+  MessageCircle // <--- NEW IMPORT
 } from 'lucide-react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'; 
 import { db } from '../firebase'; 
-import ConfirmationModal from './ConfirmationModal'; // <--- NEW IMPORT
+import ConfirmationModal from './ConfirmationModal'; 
+import ChatModal from './ChatModal'; // <--- NEW IMPORT
 
 // --- 1. BACKGROUND ANIMATION ---
 const LiveRoadBackground = () => {
@@ -50,11 +52,11 @@ const LiveRoadBackground = () => {
           className="absolute z-0 opacity-40"
         >
           <div className="flex flex-col items-center">
-             <Truck className="w-12 h-12 text-slate-600 transform -scale-y-100" /> 
-             <div className="flex gap-4 mt-[-8px]">
+              <Truck className="w-12 h-12 text-slate-600 transform -scale-y-100" /> 
+              <div className="flex gap-4 mt-[-8px]">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500 blur-[2px]"></div>
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500 blur-[2px]"></div>
-             </div>
+              </div>
           </div>
         </motion.div>
       ))}
@@ -75,7 +77,7 @@ const AnalyticsView = ({ issues }) => {
         let maxCount = 0;
         issues.forEach(i => {
             const cat = i.aiAnalysis?.category || 'Other';
-            const safeCat = cat.split(' ')[0]; // Group slightly better
+            const safeCat = cat.split(' ')[0]; 
             counts[safeCat] = (counts[safeCat] || 0) + 1;
             if (counts[safeCat] > maxCount) maxCount = counts[safeCat];
         });
@@ -564,6 +566,9 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
 
   // --- NEW: MODAL STATE ---
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  
+  // --- NEW: CHAT STATE ---
+  const [chatIssue, setChatIssue] = useState(null);
 
   
   useEffect(() => {
@@ -651,6 +656,18 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
         {...confirmModal} 
         onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
       />
+
+      {/* --- ADD CHAT MODAL HERE --- */}
+      <AnimatePresence>
+        {chatIssue && (
+            <ChatModal 
+                issueId={chatIssue.id} 
+                issueTitle={chatIssue.title} 
+                currentUserRole="admin" 
+                onClose={() => setChatIssue(null)} 
+            />
+        )}
+      </AnimatePresence>
 
       {/* 2. BACKDROP OVERLAY (Mobile Only - Z-40) */}
       <AnimatePresence>
@@ -822,7 +839,7 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
                                                         <div className="flex flex-wrap gap-2">
                                                             {departments.map((dept) => (
                                                                 <button key={dept.id} onClick={() => handleForward(issue.id, dept.id)} className={`${dept.color} hover:opacity-90 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-transform active:scale-95`}>
-                                                                    {dept.icon} {dept.id}
+                                                                        {dept.icon} {dept.id}
                                                                 </button>
                                                             ))}
                                                             <button onClick={() => {setAssigningId(null); setPrice('');}} className="text-slate-400 hover:text-white px-3 text-xs border border-slate-600 rounded-lg">Cancel</button>
@@ -835,6 +852,18 @@ const AdminDashboard = ({ issues, onUpdateStatus, onDelete }) => {
                                                 )
                                             )}
                                             {issue.status === 'Accepted' && <div className="flex items-center gap-2 text-indigo-400 text-sm font-bold bg-indigo-500/10 px-4 py-2 rounded-lg border border-indigo-500/20"><ClipboardCheck className="w-4 h-4" /> Dispatched (₹{issue.price}) - Awaiting Pickup</div>}
+                                            
+                                            {/* --- ADMIN CHAT BUTTON --- */}
+                                            {/* Only show for jobs that are Accepted or In Progress */}
+                                            {(issue.status === 'Accepted' || issue.status === 'In Progress') && (
+                                                <button 
+                                                    onClick={() => setChatIssue(issue)}
+                                                    className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-bold border border-slate-600 transition-all"
+                                                >
+                                                    <MessageCircle className="w-4 h-4 text-blue-400" /> Chat
+                                                </button>
+                                            )}
+
                                             {issue.status === 'In Progress' && <button onClick={() => onUpdateStatus(issue.id, 'Resolved')} className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold"><CheckCircle2 className="w-4 h-4" /> Force Resolve</button>}
                                             {issue.status === 'Resolved' && <button onClick={() => onUpdateStatus(issue.id, 'Open')} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-bold"><PlayCircle className="w-4 h-4" /> Re-open</button>}
                                             <button onClick={() => onDelete(issue.id)} className="ml-auto p-2 text-slate-500 hover:text-red-400 rounded-lg"><Trash2 className="w-5 h-5"/></button>
